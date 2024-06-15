@@ -15,3 +15,4 @@
 - Follow [PeP8](https://peps.python.org/pep-0008/)
 - Add CI/CD for unit testing (Put test cases in bash script)
 - Type Hints
+- Use Global Config file
