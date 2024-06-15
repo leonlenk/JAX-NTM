@@ -8,7 +8,10 @@ package-mode = false
 
 [tool.poetry.dependencies]
 python = "^3.12"
-jax = {platform = "win32", extras = ["cuda12"], version = "^0.4.29"}
+jax = [
+    {platform = "win32", extras = ["cuda12"], version = "^0.4.29"}
+    {platform = "linux", extras = ["cuda12"], version = "^0.4.29"}
+]
 jax-metal = {platform = "darwin", version = "^0.1.0"}
 pre-commit = "^3.7.1"
 flax = "^0.8.4"
