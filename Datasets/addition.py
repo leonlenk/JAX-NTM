@@ -34,7 +34,7 @@ class AdditionLoader:
     def __len__(self):
         return self.num_batches
 
-    def __next__(self) -> jax.Array:
+    def __next__(self) -> tuple[jax.Array, jax.Array]:
         if self.iterations < self.num_batches:
             self.iterations += 1
             self.prng, subkey = jax.random.split(self.prng)
