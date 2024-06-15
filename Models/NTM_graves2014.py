@@ -27,7 +27,7 @@ class LSTMModel(nn.Module):
         for lstm_layer in self.lstm_layers:
             # TODO may need to not re-init carry/hidden each time?
             carry, hidden = lstm_layer.initialize_carry(
-                jax.random.PRNGKey(self.seed), x[:, 0].shape
+                jax.random.key(self.seed), x[:, 0].shape
             )
             (carry, hidden), x = lstm_layer((carry, hidden), x)
 
