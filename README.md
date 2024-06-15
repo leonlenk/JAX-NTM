@@ -1,4 +1,4 @@
-# neural-turning-machines
+# neural-turing-machines
 
 ## Terminology
 - Algorithmic Tasks: has closed form solution
