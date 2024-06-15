@@ -2,6 +2,9 @@
 Global definitions of hard coded variables.
 """
 
+# Random Seed
+RANDOM_SEED = 137
+
 # Models
 MODEL_DNN = "dnn"
 
