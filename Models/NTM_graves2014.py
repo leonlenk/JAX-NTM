@@ -32,3 +32,22 @@ class LSTMModel(nn.Module):
             (carry, hidden), x = lstm_layer((carry, hidden), x)
 
         return x
+
+
+# basic test cases
+if __name__ == "__main__":
+    import jax.numpy as jnp
+
+    layers = 4
+    features = 32
+    batch_size = 8
+    input_features = 7
+    input_length = 12
+
+    x = jnp.ones((batch_size, input_length, input_features))
+    model = LSTMModel(features=features,layers=layers)
+    params = model.init(jax.random.key(common.RANDOM_SEED), x)
+    y = model.apply(params, x)
+
+    assert len(params[common.JAX_PARAMS]) == layers
+    assert y.shape == (batch_size, input_length, features)
