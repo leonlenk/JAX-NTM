@@ -26,8 +26,6 @@ class Memory(nn.Module):
             (1, self.N, self.M),
         )
 
-        self.memory = self.memory_bias.copy().repeat(self.batch_size, 0)
-
     def size(self):
         return self.N, self.M
 
