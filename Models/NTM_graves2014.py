@@ -12,7 +12,7 @@ class LSTMModel(nn.Module):
     seed: int = common.RANDOM_SEED
 
     @nn.compact
-    def __call__(self, input):
+    def __call__(self, input, states=None):
         lstm_layer = nn.scan(
             nn.OptimizedLSTMCell,
             variable_broadcast=common.JAX_PARAMS,
@@ -20,16 +20,21 @@ class LSTMModel(nn.Module):
             in_axes=1,
             out_axes=1,
         )
-        # TODO double check that the hidden state is a learnable parameter
+        # TODO double check that the initial hidden state is a learnable parameter
+        new_states = []
         for i in range(self.layers):
             lstm = lstm_layer(self.features)
-            state = self.param(
-                f"lstm_layer{i}_state",
-                lstm.initialize_carry,
-                input[:, 0].shape,
-            )
+            if states is None:
+                state = self.param(
+                    f"lstm_layer{i}_state",
+                    lstm.initialize_carry,
+                    input[:, 0].shape,
+                )
+            else:
+                state = states[i]
             state, input = lstm(state, input)
-        return input
+            new_states.append(state)
+        return input, new_states
 
 
 # basic test cases
@@ -45,7 +50,7 @@ if __name__ == "__main__":
     x = jnp.ones((batch_size, input_length, input_features))
     model = LSTMModel(features=features, layers=layers)
     params = model.init(jax.random.key(common.RANDOM_SEED), x)
-    y = model.apply(params, x)
+    y, states = model.apply(params, x)
 
     assert len(params[common.JAX_PARAMS]) == layers
     assert y.shape == (batch_size, input_length, features)

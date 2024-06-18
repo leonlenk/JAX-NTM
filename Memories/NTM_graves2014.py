@@ -12,6 +12,7 @@ class Memory(nn.Module):
     N = size of vector at each memory location
     """
 
+    # TODO batch size logic may be unnecessary, due to JAX batch handling?
     batch_size: int
     N: int
     M: int
