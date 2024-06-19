@@ -146,7 +146,7 @@ class NTMWriteController(NTMControllerTemplate):
 
 # TODO: add test cases
 if __name__ == "__main__":
-    memory_model = Memory(10, 10, 10)
+    memory_model = Memory(8, 10)
     read_controller = NTMReadController(memory_model)
     write_controller = NTMWriteController(memory_model)
 

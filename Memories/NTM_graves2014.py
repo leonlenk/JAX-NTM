@@ -7,13 +7,11 @@ import optax
 
 class Memory(nn.Module):
     """Memory interface for NTM from Graves 2014 (arXiv:1410.5401).
-    Memory has a size of: batch size x N x M.
+    Memory has a size of: N x M.
     N = number of memory locations
     N = size of vector at each memory location
     """
 
-    # TODO batch size logic may be unnecessary, due to JAX batch handling?
-    batch_size: int
     N: int
     M: int
 
@@ -27,7 +25,8 @@ class Memory(nn.Module):
             (1, self.N, self.M),
         )
 
-        self.memory = self.memory_bias.copy().repeat(self.batch_size, axis=1)
+        # TODO do we need this copy?
+        self.memory = self.memory_bias.copy()
 
     def size(self):
         return self.N, self.M
@@ -75,7 +74,7 @@ class Memory(nn.Module):
 
     def _similarity(self, key_vector, key_strength):
         """arXiv:1410.5401 equation 6"""
-        key_vector = key_vector.view(self.batch_size, 1, -1)
+        key_vector = key_vector.reshape((1, -1))
         w = nn.softmax(
             key_strength
             * optax.cosine_similarity(self.memory, key_vector, epsilon=1e-16),
@@ -91,15 +90,12 @@ class Memory(nn.Module):
 
     def _shift(self, gated_weighting, shift_weighting):
         """arXiv:1410.5401 equation 8"""
-        result = jnp.zeros(gated_weighting.size())
-        for b in range(self.batch_size):
-            result[b] = circular_convolution_1d(gated_weighting[b], shift_weighting[b])
-        return result
+        return circular_convolution_1d(gated_weighting, shift_weighting)
 
     def _sharpen(self, weights, sharpen_scalar):
         """arXiv:1410.5401 equation 9"""
         w = weights**sharpen_scalar
-        w = jnp.divide(w, jnp.sum(w, axis=1).view(-1, 1) + 1e-16)
+        w = jnp.divide(w, jnp.sum(w, axis=1).reshape(-1, 1) + 1e-16)
         return w
 
 
