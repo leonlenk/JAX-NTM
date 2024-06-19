@@ -1,8 +1,8 @@
-from Common import common
-
 import jax.numpy as jnp
-from flax import linen as nn
 import optax
+from flax import linen as nn
+
+from Common import common
 
 
 class Memory(nn.Module):
@@ -32,19 +32,15 @@ class Memory(nn.Module):
     def size(self):
         return self.N, self.M
 
-    def read(
-        self, read_weights
-    ):
+    def read(self, read_weights):
         """arXiv:1410.5401 section 3.1"""
         return jnp.matmul(read_weights, self.memory).squeeze(1)
 
-    def write(
-        self, read_weights, erase_vector, add_vector
-    ):
+    def write(self, read_weights, erase_vector, add_vector):
         """arXiv:1410.5401 section 3.2"""
 
         # calculate erase and add vectors
-        read_weights = jnp.expand_dims(read_weights.squeeze(0),axis=1)
+        read_weights = jnp.expand_dims(read_weights.squeeze(0), axis=1)
         erase = jnp.matmul(read_weights, erase_vector)
         add = jnp.matmul(read_weights, add_vector)
         # update memory
@@ -91,7 +87,9 @@ class Memory(nn.Module):
 
     def _shift(self, gated_weighting, shift_weighting):
         """arXiv:1410.5401 equation 8"""
-        return circular_convolution_1d(gated_weighting.squeeze(0), shift_weighting.squeeze(0))
+        return circular_convolution_1d(
+            gated_weighting.squeeze(0), shift_weighting.squeeze(0)
+        )
 
     def _sharpen(self, weights, sharpen_scalar):
         """arXiv:1410.5401 equation 9"""

@@ -1,10 +1,10 @@
+import jax.numpy as jnp
+from flax import linen as nn
+
 from Common import common
+from Controllers.NTM_graves2014 import NTMReadController, NTMWriteController
 from Memories.NTM_graves2014 import Memory
 from Models.NTM_graves2014 import LSTMModel
-from Controllers.NTM_graves2014 import NTMReadController, NTMWriteController
-
-from flax import linen as nn
-import jax.numpy as jnp
 
 
 class NTM(nn.Module):

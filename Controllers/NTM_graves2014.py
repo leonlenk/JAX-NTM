@@ -1,10 +1,11 @@
-from Common import common
-from Memories.NTM_graves2014 import Memory
+from typing import List, Tuple
 
 import jax
 import jax.numpy as jnp
 from flax import linen as nn
-from typing import Tuple, List
+
+from Common import common
+from Memories.NTM_graves2014 import Memory
 
 
 def _split_cols(matrix: jax.Array, lengths: Tuple) -> List[jax.Array]:
@@ -77,7 +78,7 @@ class NTMReadController(NTMControllerTemplate):
 
     # TODO: figure out type annotations
     @nn.compact
-    def __call__(self, embeddings: jax.Array, w_prev):
+    def __call__(self, embeddings: jax.Array, w_prev: jax.Array):
         """NTMReadController forward function.
 
         :param embeddings: input representation of the controller.
@@ -119,7 +120,7 @@ class NTMWriteController(NTMControllerTemplate):
 
     # TODO: figure out type annotations
     @nn.compact
-    def __call__(self, embeddings: jax.Array, w_prev):
+    def __call__(self, embeddings: jax.Array, w_prev: jax.Array):
         """NTMWriteController forward function.
 
         :param embeddings: input representation of the model.

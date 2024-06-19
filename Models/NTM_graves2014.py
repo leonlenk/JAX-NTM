@@ -1,7 +1,7 @@
-from Common import common
-
 import jax
 from flax import linen as nn
+
+from Common import common
 
 
 class LSTMModel(nn.Module):
