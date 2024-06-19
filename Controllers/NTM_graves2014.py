@@ -50,7 +50,7 @@ class NTMControllerTemplate(nn.Module):
     # TODO: give better variable names and add type annotations
     def _address_memory(self, k, β, g, s, y, w_prev):
         # Handle Activations
-        k = k.clone()
+        k = k.copy()
         β = nn.softplus(β)
         g = nn.sigmoid(g)
         s = nn.softmax(s, axis=1)
@@ -122,7 +122,7 @@ class NTMWriteController(NTMControllerTemplate):
     def __call__(self, embeddings: jax.Array, w_prev):
         """NTMWriteController forward function.
 
-        :param embeddings: input representation of the controller.
+        :param embeddings: input representation of the model.
         :param w_prev: previous step state
         """
         memory_addresses = nn.Dense(

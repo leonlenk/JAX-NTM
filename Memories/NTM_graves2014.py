@@ -26,6 +26,7 @@ class Memory(nn.Module):
         )
 
         # TODO do we need this copy?
+        # TODO memory is frozen outside of setup - can't write
         self.memory = self.memory_bias.copy()
 
     def size(self):
@@ -33,20 +34,22 @@ class Memory(nn.Module):
 
     def read(
         self, read_weights
-    ):  # TODO - figure out all the necessary squeezing/unsqueezing
+    ):
         """arXiv:1410.5401 section 3.1"""
-        return jnp.matmul(read_weights.unsqueeze(1), self.memory).squeeze(1)
+        return jnp.matmul(read_weights, self.memory).squeeze(1)
 
     def write(
         self, read_weights, erase_vector, add_vector
-    ):  # TODO - figure out all the necessary squeezing/unsqueezing
+    ):
         """arXiv:1410.5401 section 3.2"""
 
         # calculate erase and add vectors
-        erase = jnp.matmul(read_weights.unsqueeze(-1), erase_vector.unsqueeze(1))
-        add = jnp.matmul(read_weights.unsqueeze(-1), add_vector.unsqueeze(1))
+        read_weights = jnp.expand_dims(read_weights.squeeze(0),axis=1)
+        erase = jnp.matmul(read_weights, erase_vector)
+        add = jnp.matmul(read_weights, add_vector)
         # update memory
-        self.memory = jnp.multiply(self.memory, (1 - erase) + add)
+        self.memory = jnp.multiply(self.memory, 1 - erase)
+        self.memory = jnp.add(self.memory, add)
 
     def address(
         self,
@@ -73,12 +76,10 @@ class Memory(nn.Module):
         return sharpened_weights
 
     def _similarity(self, key_vector, key_strength):
-        """arXiv:1410.5401 equation 6"""
-        key_vector = key_vector.reshape((1, -1))
+        """arXiv:1410.5401 equations 5-6"""
         w = nn.softmax(
             key_strength
             * optax.cosine_similarity(self.memory, key_vector, epsilon=1e-16),
-            axis=1,
         )
         return w
 
@@ -90,12 +91,12 @@ class Memory(nn.Module):
 
     def _shift(self, gated_weighting, shift_weighting):
         """arXiv:1410.5401 equation 8"""
-        return circular_convolution_1d(gated_weighting, shift_weighting)
+        return circular_convolution_1d(gated_weighting.squeeze(0), shift_weighting.squeeze(0))
 
     def _sharpen(self, weights, sharpen_scalar):
         """arXiv:1410.5401 equation 9"""
         w = weights**sharpen_scalar
-        w = jnp.divide(w, jnp.sum(w, axis=1).reshape(-1, 1) + 1e-16)
+        w = jnp.divide(w, jnp.sum(w) + 1e-16)
         return w
 
 
