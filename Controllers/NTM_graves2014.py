@@ -1,9 +1,10 @@
 from Common import common
+from Memories.NTM_graves2014 import Memory
 
 import jax
 import jax.numpy as jnp
 from flax import linen as nn
-from typing import Any, Tuple, List
+from typing import Tuple, List
 
 
 def _split_cols(matrix: jax.Array, lengths: Tuple) -> List[jax.Array]:
@@ -21,7 +22,7 @@ def _split_cols(matrix: jax.Array, lengths: Tuple) -> List[jax.Array]:
 class NTMControllerTemplate(nn.Module):
     """An NTM Read/Write Controller."""
 
-    memory: Any
+    memory: Memory
 
     def setup(self):
         # TODO: figure out memory typing
@@ -69,7 +70,7 @@ class NTMReadController(NTMControllerTemplate):
 
     def create_new_state(self, batch_size: int) -> jax.Array:
         # The state holds the previous time step address weightings
-        return jnp.zeros(batch_size, self.N_dim_memory)
+        return jnp.zeros((batch_size, self.N_dim_memory))
 
     def is_read_controller(self) -> bool:
         return True
@@ -111,7 +112,7 @@ class NTMWriteController(NTMControllerTemplate):
         )
 
     def create_new_state(self, batch_size: int) -> jax.Array:
-        return jnp.zeros(batch_size, self.N_dim_memory)
+        return jnp.zeros((batch_size, self.N_dim_memory))
 
     def is_read_controller(self) -> bool:
         return False
@@ -145,9 +146,7 @@ class NTMWriteController(NTMControllerTemplate):
 
 # TODO: add test cases
 if __name__ == "__main__":
-    from Memories import NTM_graves2014
-
-    memory_model = NTM_graves2014.Memory(10, 10, 10)
+    memory_model = Memory(10, 10, 10)
     read_controller = NTMReadController(memory_model)
     write_controller = NTMWriteController(memory_model)
 
