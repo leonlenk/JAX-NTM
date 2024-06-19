@@ -18,16 +18,16 @@ def _split_cols(matrix: jax.Array, lengths: Tuple) -> List[jax.Array]:
     return results
 
 
-class NTMHeadTemplate(nn.Module):
-    """An NTM Read/Write Head."""
+class NTMControllerTemplate(nn.Module):
+    """An NTM Read/Write Controller."""
 
     memory: Any
 
     def setup(self):
         # TODO: figure out memory typing
-        """Initilize the read/write head.
+        """Initilize the read/write controller.
 
-        :param memory: The memory object to be addressed by the head.
+        :param memory: The memory object to be addressed by the controller.
         """
         self.N_dim_memory, self.M_dim_memory = self.memory.size()
 
@@ -43,7 +43,7 @@ class NTMHeadTemplate(nn.Module):
     def register_parameters(self):
         raise NotImplementedError
 
-    def is_read_head(self):
+    def is_read_controller(self):
         return NotImplementedError
 
     # TODO: give better variable names and add type annotations
@@ -60,7 +60,7 @@ class NTMHeadTemplate(nn.Module):
         return w
 
 
-class NTMReadHead(NTMHeadTemplate):
+class NTMReadController(NTMControllerTemplate):
     def setup(self):
         super().setup()
 
@@ -71,13 +71,13 @@ class NTMReadHead(NTMHeadTemplate):
         # The state holds the previous time step address weightings
         return jnp.zeros(batch_size, self.N_dim_memory)
 
-    def is_read_head(self) -> bool:
+    def is_read_controller(self) -> bool:
         return True
 
     # TODO: figure out type annotations
     @nn.compact
     def __call__(self, embeddings: jax.Array, w_prev):
-        """NTMReadHead forward function.
+        """NTMReadController forward function.
 
         :param embeddings: input representation of the controller.
         :param w_prev: previous step state
@@ -96,7 +96,7 @@ class NTMReadHead(NTMHeadTemplate):
         return memory_data, memory_locations
 
 
-class NTMWriteHead(NTMHeadTemplate):
+class NTMWriteController(NTMControllerTemplate):
     def setup(self):
         super().setup()
         # Corresponding to k, β, g, s, γ, e, a sizes from the paper
@@ -113,13 +113,13 @@ class NTMWriteHead(NTMHeadTemplate):
     def create_new_state(self, batch_size: int) -> jax.Array:
         return jnp.zeros(batch_size, self.N_dim_memory)
 
-    def is_read_head(self) -> bool:
+    def is_read_controller(self) -> bool:
         return False
 
     # TODO: figure out type annotations
     @nn.compact
     def __call__(self, embeddings: jax.Array, w_prev):
-        """NTMWriteHead forward function.
+        """NTMWriteController forward function.
 
         :param embeddings: input representation of the controller.
         :param w_prev: previous step state
@@ -148,17 +148,21 @@ if __name__ == "__main__":
     from Memories import NTM_graves2014
 
     memory_model = NTM_graves2014.Memory(10, 10, 10)
-    read_head = NTMReadHead(memory_model)
-    write_head = NTMWriteHead(memory_model)
+    read_controller = NTMReadController(memory_model)
+    write_controller = NTMWriteController(memory_model)
 
     rng_key = jax.random.key(common.RANDOM_SEED)
     key1, key2 = jax.random.split(rng_key)
 
-    # TODO: fix dim mismatch when read head calls memory.address
-    read_head_variables = read_head.init(key1, jnp.ones((1, 10)), jnp.ones((1, 10)))
-    write_head_variables = write_head.init(key2, jnp.ones((1, 10)), jnp.ones((1, 10)))
+    # TODO: fix dim mismatch when read controller calls memory.address
+    read_controller_variables = read_controller.init(
+        key1, jnp.ones((1, 10)), jnp.ones((1, 10))
+    )
+    write_controller_variables = write_controller.init(
+        key2, jnp.ones((1, 10)), jnp.ones((1, 10))
+    )
 
-    assert read_head.is_read_head()
-    assert not write_head.is_read_head()
+    assert read_controller.is_read_controller()
+    assert not write_controller.is_read_controller()
 
     print("NTM graves 2014 controller passed all tests")
