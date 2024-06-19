@@ -11,10 +11,12 @@ RANDOM_SEED = 137
 # Models
 MODEL_DNN = "dnn"
 
-# Memory Interfaces
-MEMORY_ORIGINAL_GRAVES2014 = "NTM graves 2014"
-MEMORY_ORIGINAL_GRAVES2014_MEMORY_BIAS = "memory_bias"
-MEMORY_LIE_ACCESS_YANG2014 = "LANTM yang 2014"
+# Machine Specific Variables
+GRAVES2014 = "NTM graves 2014"
+GRAVES2014_MEMORY_BIAS = "memory_bias"
+GRAVES2014_LSTM_LAYER_STATE = "lstm_layer_state_"
+GRAVES2014_READ_CONTROLLER_BIAS = "read_controller_bias_"
+YANG2014 = "LANTM yang 2014"
 
 # Hyperparameters
 HYPERPARAM_LEARNING_RATE = "learning_rate"

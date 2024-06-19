@@ -22,7 +22,7 @@ class Memory(nn.Module):
             nn.initializers.uniform()
         )  # TODO test different memory bias initializers
         self.memory_bias = self.param(
-            common.MEMORY_ORIGINAL_GRAVES2014_MEMORY_BIAS,
+            common.GRAVES2014_MEMORY_BIAS,
             memory_bias_initializer,
             (1, self.N, self.M),
         )

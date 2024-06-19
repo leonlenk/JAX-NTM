@@ -1,6 +1,7 @@
+from Common import common
 from Memories.NTM_graves2014 import Memory
 from Models.NTM_graves2014 import LSTMModel
-# from Controllers.NTM_graves2014 import *
+from Controllers.NTM_graves2014 import NTMReadController, NTMWriteController
 
 from flax import linen as nn
 import jax.numpy as jnp
@@ -12,13 +13,24 @@ class NTM(nn.Module):
     input_size: int
     output_size: int
     memory: Memory
-    # controllers:
+    read_controllers: list[NTMReadController]
+    write_controllers: list[NTMWriteController]
     model: LSTMModel
 
     def setup(self):
-        self.N, self.M = self.memory.size()
+        self.N_dim_memory, self.M_dim_memory = self.memory.size()
 
-        # TODO initialize the controller
+        # initialize bias for each read head
+        self.read_controller_biases = []
+        memory_bias_initializer = nn.initializers.normal()
+        for i in range(len(self.read_controllers)):
+            self.read_controller_biases.append(
+                self.param(
+                    f"{common.GRAVES2014_READ_CONTROLLER_BIAS}{i}",
+                    memory_bias_initializer,
+                    (1, self.M),
+                )
+            )
 
         # add a dense layer for the ultimate output
         kernel_init = nn.initializers.xavier_uniform()
@@ -27,21 +39,44 @@ class NTM(nn.Module):
             self.num_outputs, kernel_init=kernel_init, bias_init=bias_init
         )
 
+    # TODO do we need functions to reinitialize the states of everything?
+
     # TODO how do we deal with batch size?
 
     def __call__(self, input, previous_state):
-        previous_reads, previous_model_state, previous_controller_states = (
-            previous_state
-        )
+        (
+            previous_reads,
+            previous_model_state,
+            previous_read_controller_states,
+            previous_write_controller_states,
+        ) = previous_state
 
         full_input = jnp.concatenate([input] + previous_reads, axis=1)
         model_output, model_state = self.model(full_input, previous_model_state)
 
-        # TODO perform controller operations
+        # perform controller operations
         reads = []
-        controller_states = []
+        read_controller_states = []
+        write_controller_states = []
+        for controller, prev_controller_state in zip(
+            self.read_controllers, previous_read_controller_states
+        ):
+            read, controller_state = controller(model_output, prev_controller_state)
+            reads.append(read)
+            read_controller_states.append(controller_state)
+        for controller, prev_controller_state in zip(
+            self.write_controllers, previous_write_controller_states
+        ):
+            controller_state = controller(model_output, prev_controller_state)
+            read_controller_states.append(controller_state)
 
+        # run the outputs through the dense layer
         dense_input = jnp.concatenate([model_output] + reads, axis=1)
         output = nn.sigmoid(self.output_layer(dense_input))
 
-        return output, (reads, model_state, controller_states)
+        return output, (
+            reads,
+            model_state,
+            read_controller_states,
+            write_controller_states,
+        )

@@ -20,20 +20,22 @@ class LSTMModel(nn.Module):
             in_axes=1,
             out_axes=1,
         )
-        # TODO double check that the initial hidden state is a learnable parameter
+
         new_states = []
         for i in range(self.layers):
             lstm = lstm_layer(self.features)
             if states is None:
                 state = self.param(
-                    f"lstm_layer{i}_state",
+                    f"{common.GRAVES2014_LSTM_LAYER_STATE}{i}",
                     lstm.initialize_carry,
                     input[:, 0].shape,
                 )
             else:
                 state = states[i]
+
             state, input = lstm(state, input)
             new_states.append(state)
+
         return input, new_states
 
 
