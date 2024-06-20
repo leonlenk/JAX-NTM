@@ -147,7 +147,10 @@ class NTMWriteController(NTMControllerTemplate):
 
 # TODO: add test cases
 if __name__ == "__main__":
-    memory_model = Memory(8, 10)
+    test_n = 8
+    test_m = 9
+    test_model_feature_size = 10
+    memory_model = Memory(test_n, test_m)
     read_controller = NTMReadController(memory_model)
     write_controller = NTMWriteController(memory_model)
 
@@ -156,13 +159,11 @@ if __name__ == "__main__":
 
     # TODO: fix dim mismatch when read controller calls memory.address
     read_controller_variables = read_controller.init(
-        key1, jnp.ones((1, 10)), jnp.ones((1, 10))
+        key1, jnp.ones((1, test_model_feature_size)), jnp.ones((1, test_n))
     )
     write_controller_variables = write_controller.init(
-        key2, jnp.ones((1, 10)), jnp.ones((1, 10))
+        key2, jnp.ones((1, test_model_feature_size)), jnp.ones((1, test_n))
     )
 
     assert read_controller.is_read_controller()
     assert not write_controller.is_read_controller()
-
-    print("NTM graves 2014 controller passed all tests")
