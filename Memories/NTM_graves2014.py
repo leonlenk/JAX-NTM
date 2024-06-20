@@ -3,9 +3,10 @@ import optax
 from flax import linen as nn
 
 from Common import common
+from Memories.MemoryInterface import MemoryInterface
 
 
-class Memory(nn.Module):
+class Memory(MemoryInterface, nn.Module):
     """Memory interface for NTM from Graves 2014 (arXiv:1410.5401).
     Memory has a size of: N x M.
     N = number of memory locations
