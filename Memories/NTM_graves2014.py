@@ -20,22 +20,19 @@ class Memory(MemoryInterface, nn.Module):
         memory_bias_initializer = (
             nn.initializers.uniform()
         )  # TODO test different memory bias initializers
-        self.memory_bias = self.param(
+        self.memory = self.variable(
+            common.JAX_PARAMS,
             common.GRAVES2014_MEMORY_BIAS,
-            memory_bias_initializer,
-            (1, self.N, self.M),
+            (lambda s, d: memory_bias_initializer(self.make_rng(common.JAX_PARAMS), s, d)),
+            (1, self.N, self.M), jnp.float_
         )
-
-        # TODO do we need this copy?
-        # TODO memory is frozen outside of setup - can't write
-        self.memory = self.memory_bias.copy()
 
     def size(self):
         return self.N, self.M
 
     def read(self, read_weights):
         """arXiv:1410.5401 section 3.1"""
-        return jnp.matmul(read_weights, self.memory).squeeze(1)
+        return jnp.matmul(read_weights, self.memory.value).squeeze(1)
 
     def write(self, read_weights, erase_vector, add_vector):
         """arXiv:1410.5401 section 3.2"""
@@ -45,8 +42,8 @@ class Memory(MemoryInterface, nn.Module):
         erase = jnp.matmul(read_weights, erase_vector)
         add = jnp.matmul(read_weights, add_vector)
         # update memory
-        self.memory = jnp.multiply(self.memory, 1 - erase)
-        self.memory = jnp.add(self.memory, add)
+        self.memory.value = jnp.multiply(self.memory.value, 1 - erase)
+        self.memory.value = jnp.add(self.memory.value, add)
 
     def address(
         self,
@@ -76,7 +73,7 @@ class Memory(MemoryInterface, nn.Module):
         """arXiv:1410.5401 equations 5-6"""
         w = nn.softmax(
             key_strength
-            * optax.cosine_similarity(self.memory, key_vector, epsilon=1e-16),
+            * optax.cosine_similarity(self.memory.value, key_vector, epsilon=1e-16),
         )
         return w
 
