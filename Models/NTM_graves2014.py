@@ -1,5 +1,6 @@
 import jax
 from flax import linen as nn
+from jax import Array
 
 from Common import common
 
@@ -12,7 +13,7 @@ class LSTMModel(nn.Module):
     seed: int = common.RANDOM_SEED
 
     @nn.compact
-    def __call__(self, input, states=None):
+    def __call__(self, input: Array, states=None) -> tuple[Array, list[Array]]:
         lstm_layer = nn.scan(
             nn.OptimizedLSTMCell,
             variable_broadcast=common.JAX_PARAMS,

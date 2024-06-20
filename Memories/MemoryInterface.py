@@ -2,7 +2,6 @@ from abc import ABC, abstractmethod
 
 import jax.numpy as jnp
 from jax import Array
-from jax.typing import ArrayLike
 
 
 class MemoryInterface(ABC):
@@ -11,24 +10,24 @@ class MemoryInterface(ABC):
         pass
 
     @abstractmethod
-    def read(self, read_weights: ArrayLike) -> Array:
+    def read(self, read_weights: Array) -> Array:
         pass
 
     @abstractmethod
     def write(
-        self, read_weights: ArrayLike, erase_vector: ArrayLike, add_vector: ArrayLike
+        self, read_weights: Array, erase_vector: Array, add_vector: Array
     ) -> None:
         pass
 
     @abstractmethod
     def address(
         self,
-        key_vector: ArrayLike,
-        key_strength: ArrayLike,
-        interp_gate_scalar: ArrayLike,
-        shift_weights: ArrayLike,
-        sharpen_scalar: ArrayLike,
-        previous_weights: ArrayLike,
+        key_vector: Array,
+        key_strength: Array,
+        interp_gate_scalar: Array,
+        shift_weights: Array,
+        sharpen_scalar: Array,
+        previous_weights: Array,
     ) -> Array:
         pass
 

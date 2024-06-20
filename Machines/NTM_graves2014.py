@@ -1,5 +1,6 @@
 import jax.numpy as jnp
 from flax import linen as nn
+from jax import Array
 
 from Common import common
 from Controllers.NTM_graves2014 import NTMReadController, NTMWriteController
@@ -43,7 +44,11 @@ class NTM(nn.Module):
 
     # TODO how do we deal with batch size?
 
-    def __call__(self, input, previous_state):
+    def __call__(
+        self,
+        input: Array,
+        previous_state: tuple[list[Array], list[Array], list[Array], list[Array]],
+    ) -> tuple[Array, tuple[list[Array], list[Array], list[Array], list[Array]]]:
         (
             previous_reads,
             previous_model_state,
