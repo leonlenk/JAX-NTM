@@ -23,12 +23,12 @@ class NTM(nn.Module):
 
         # initialize bias for each read head
         self.read_controller_biases = []
-        memory_bias_initializer = nn.initializers.normal()
+        controller_bias_initializer = nn.initializers.normal()
         for i in range(len(self.read_controllers)):
             self.read_controller_biases.append(
                 self.param(
                     f"{common.GRAVES2014_READ_CONTROLLER_BIAS}{i}",
-                    memory_bias_initializer,
+                    controller_bias_initializer,
                     (1, self.M),
                 )
             )

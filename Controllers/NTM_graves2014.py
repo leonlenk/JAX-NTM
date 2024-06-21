@@ -157,7 +157,6 @@ if __name__ == "__main__":
     rng_key = jax.random.key(common.RANDOM_SEED)
     key1, key2 = jax.random.split(rng_key)
 
-    # TODO: fix dim mismatch when read controller calls memory.address
     read_controller_variables = read_controller.init(
         key1, jnp.ones((1, test_model_feature_size)), jnp.ones((1, test_n))
     )
