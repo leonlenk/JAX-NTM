@@ -1,4 +1,7 @@
-#swp
+# custom directories
+Visualization_Outputs/
+
+# wp
 *.swp
 
 # ruff
