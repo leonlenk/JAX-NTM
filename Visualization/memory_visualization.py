@@ -2,7 +2,7 @@ from pathlib import Path
 
 import jax.numpy as jnp
 from jax import Array
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFont
 
 from Common import common
 
@@ -13,6 +13,42 @@ padding_edges = [pixel_scale // 8, pixel_scale // 8, pixel_scale // 2, pixel_sca
 # padding between memory blocks
 padding_interior = pixel_scale // 8
 
+draw_font = ImageFont.load_default(size=pixel_scale // 4)
+
+
+def plot_memory_state_comparison(
+    memory_1: Array,
+    memory_2: Array,
+    transpose: bool = True,
+    save_location: str | None = None,
+    annotation: list[str] = ["Target", "Output"],
+) -> Image.Image:
+    assert len(annotation) == 2, "Must have the exactly two annotations"
+    memory_img_1 = plot_memory_state(
+        memory_1, transpose=transpose, annotation=annotation[0]
+    )
+    memory_img_2 = plot_memory_state(
+        memory_2, transpose=transpose, annotation=annotation[1]
+    )
+
+    if transpose:
+        img = Image.new(
+            "RGB", (memory_img_1.width, memory_img_1.height + memory_img_2.height)
+        )
+        img.paste(memory_img_1, (0, 0))
+        img.paste(memory_img_2, (0, memory_img_1.height))
+    else:
+        img = Image.new(
+            "RGB", (memory_img_1.width + memory_img_2.width, memory_img_1.height)
+        )
+        img.paste(memory_img_1, (0, 0))
+        img.paste(memory_img_2, (memory_img_1.width, 0))
+
+    if save_location:
+        img.save(get_save_path(save_location, common.VISUALIZATION_IMG_EXTENSION))
+
+    return img
+
 
 def plot_memory_states_gif(
     memories: list[Array],
@@ -21,6 +57,7 @@ def plot_memory_states_gif(
     save_location: str | None = None,
     loop: int | None = None,
     frame_duration: int = 500,
+    annotate_frame: bool = False,
 ) -> list[Image.Image]:
     if attentions is not None:
         assert len(memories) == len(
@@ -31,8 +68,14 @@ def plot_memory_states_gif(
 
     memory_state_gif: list[Image.Image] = []
     for i in range(len(memories)):
+        annotation = f"State {i}" if annotate_frame else None
         memory_state_gif.append(
-            plot_memory_state(memories[i], attentions[i], transpose)
+            plot_memory_state(
+                memories[i],
+                attention=attentions[i],
+                transpose=transpose,
+                annotation=annotation,
+            )
         )
 
     if save_location:
@@ -86,6 +129,7 @@ def plot_memory_state(
     attention: Array | None = None,
     transpose: bool = True,
     save_location: str | None = None,
+    annotation: str | None = None,
 ) -> Image.Image:
     assert (
         len(memory.shape) == 2
@@ -96,6 +140,7 @@ def plot_memory_state(
 
     # color definitions (grayscale)
     color_background = (255, 255, 255)
+    color_foreground = (0, 0, 0)
 
     def color_from_value(value: float):
         # clip to (0,1)
@@ -136,6 +181,14 @@ def plot_memory_state(
                 [x0, y0, x0 + pixel_scale, y0 + pixel_scale], fill=color_from_value(val)
             )
 
+    if annotation is not None:
+        draw.text(
+            (padding_edges[0], padding_edges[1]),
+            annotation,
+            font=draw_font,
+            fill=color_foreground,
+        )
+
     if attention is not None:
         img = plot_fuzzy_attention(img, attention)
 
@@ -167,6 +220,16 @@ if __name__ == "__main__":
             [0, 0, 0, 1, 0.5, 0, 1, 0],
         ]
     )
+
+    test_memory_comparison = jnp.array(
+        [
+            [0, 0, 0, 1, 0.5, 0, 1, 0],
+            [0, 0, 1, 0.5, 0, 1, 0, 0],
+            [0, 1, 0.5, 0, 1, 0, 0, 0],
+            [1, 0.5, 0, 1, 0, 0, 0, 0],
+        ]
+    )
+
     test_memory_attention = jnp.array([0, 0, 0, 0.1, 0.3, 0.1, 0.5, 0])
 
     test_memory_states = [
@@ -212,9 +275,18 @@ if __name__ == "__main__":
         ),
     ]
 
-    memory_state_image = plot_memory_state(test_memory, attention=test_memory_attention)
-    memory_state_image.show()
+    memory_state_image = plot_memory_state(
+        test_memory,
+        attention=test_memory_attention,
+        annotation="Memory visualization test",
+        save_location="test_mem.png",
+    )
+    # memory_state_image.show()
+
+    memory_comparison_image = plot_memory_state_comparison(
+        test_memory, test_memory_comparison, save_location="test_mem_comparison"
+    )
 
     memory_states_gif = plot_memory_states_gif(
-        test_memory_states, save_location="./test.gif", loop=0
+        test_memory_states, save_location="./test.gif", loop=0, annotate_frame=True
     )
