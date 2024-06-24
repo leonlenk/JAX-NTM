@@ -154,9 +154,11 @@ if __name__ == "__main__":
     read_controller_variables = read_controller.init(
         key1, jnp.ones((1, test_model_feature_size)), jnp.ones((1, test_n))
     )
+    print("Initialized read controller")
     write_controller_variables = write_controller.init(
         key2, jnp.ones((1, test_model_feature_size)), jnp.ones((1, test_n))
     )
+    print("Initialized write controller")
 
     assert read_controller.is_read_controller()
     assert not write_controller.is_read_controller()
