@@ -5,7 +5,8 @@ import jax.numpy as jnp
 from flax import linen as nn
 
 from Common import common
-from Memories.NTM_graves2014 import Memory
+from Controllers.ControllerInterface import ControllerInterface
+from Memories.MemoryInterface import MemoryInterface
 
 
 def _split_cols(matrix: jax.Array, lengths: Tuple) -> List[jax.Array]:
@@ -20,10 +21,11 @@ def _split_cols(matrix: jax.Array, lengths: Tuple) -> List[jax.Array]:
     return results
 
 
+@ControllerInterface.register
 class NTMControllerTemplate(nn.Module):
     """An NTM Read/Write Controller."""
 
-    memory: Memory
+    memory: MemoryInterface
 
     def setup(self):
         # TODO: figure out memory typing
@@ -38,15 +40,6 @@ class NTMControllerTemplate(nn.Module):
             scale=1.4, mode="fan_avg", distribution="uniform"
         )
         self.bias_initializer = nn.initializers.normal(stddev=0.01)
-
-    def create_new_state(self, batch_size: int):
-        raise NotImplementedError
-
-    def register_parameters(self):
-        raise NotImplementedError
-
-    def is_read_controller(self):
-        return NotImplementedError
 
     # TODO: give better variable names and add type annotations
     def _address_memory(self, k, β, g, s, y, w_prev):
@@ -147,6 +140,8 @@ class NTMWriteController(NTMControllerTemplate):
 
 # TODO: add test cases
 if __name__ == "__main__":
+    from Memories.NTM_graves2014 import Memory
+
     test_n = 8
     test_m = 9
     test_model_feature_size = 10
