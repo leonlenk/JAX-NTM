@@ -11,7 +11,7 @@ class AdditionLoader:
     """
 
     seed: int = common.RANDOM_SEED
-    batch_size: int = common.HYPERPARAM_BATCH_SIZE
+    batch_size: int = common.CONFIG_BATCH_SIZE
 
     def __init__(
         self,
@@ -58,11 +58,11 @@ if __name__ == "__main__":
             batch[0] <= max
         ), "Summands out of range"
         assert batch[0].shape == (
-            common.HYPERPARAM_BATCH_SIZE,
+            common.CONFIG_BATCH_SIZE,
             2,
         ), "Incorrect shape of summands array"
         assert batch[1].shape == (
-            common.HYPERPARAM_BATCH_SIZE,
+            common.CONFIG_BATCH_SIZE,
         ), "Incorrect shape of sum array"
         assert jax.numpy.all(
             batch[0][:, 0] + batch[0][:, 1] == batch[1]

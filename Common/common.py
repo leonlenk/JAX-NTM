@@ -18,13 +18,24 @@ GRAVES2014_LSTM_LAYER_STATE = "lstm_layer_state_"
 GRAVES2014_READ_CONTROLLER_BIAS = "read_controller_bias_"
 YANG2014 = "LANTM yang 2014"
 
-# Hyperparameters
-HYPERPARAM_LEARNING_RATE = "learning_rate"
-HYPERPARAM_BATCH_SIZE = 16
-HYPERPARAM_OPTIMIZER = "optimizer"
-HYPERPARAM_OPTIMIZER_ADAM = "adam"
+# Training Configuration (Hyperparameters)
+CONFIG_EPOCHS = "epochs"
+CONFIG_LEARNING_RATE = "learning_rate"
+CONFIG_BATCH_SIZE = 16
+CONFIG_OPTIMIZER = "optimizer"
+CONFIG_OPTIMIZER_ADAM = "adam"
 
 # Visualization
 VISUALIZATION_OUTPUT_DIR = "Visualization_Outputs/"
 VISUALIZATION_GIF_EXTENSION = ".gif"
 VISUALIZATION_IMG_EXTENSION = ".png"
+
+# WandB
+WANDB_PROJECT_NAME = "neural-turing-machines"
+WANDB_JOB_TRAIN = "train"
+WANDB_JOB_EVAL = "eval"
+WANDB_TAG_LSTM = "lstm"
+WANDB_TAG_TRANSFORMER = "transformer"
+WANDB_TAG_RNN = "rnn"
+WANDB_TAG_FNN = "fnn"
+WANDB_TAG_LIE_ACCESS = "lie access"

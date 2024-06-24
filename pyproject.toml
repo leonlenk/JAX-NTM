@@ -22,6 +22,8 @@ torch = [
 ]
 optax = "^0.2.2"
 pillow = "^10.3.0"
+wandb = "^0.17.2"
+tqdm = "^4.66.4"
 
 [[tool.poetry.source]]
 name = "pytorch_cpu"
