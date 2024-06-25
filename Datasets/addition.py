@@ -10,17 +10,12 @@ class AdditionLoader:
     where the first is the summands and the second is the sum. Thus it is of the form (data, label)
     """
 
-    seed: int = common.RANDOM_SEED
-    batch_size: int = common.CONFIG_BATCH_SIZE
+    seed: int = common.JAX.RANDOM_SEED
 
-    def __init__(
-        self,
-        min: int,
-        max: int,
-        num_batches: int,
-    ):
+    def __init__(self, min: int, max: int, batch_size: int, num_batches: int):
         self.min = min
         self.max = max + 1
+        self.batch_size = batch_size
         self.num_batches = num_batches
         self.shape = (self.batch_size, 2)
         self.prng = jax.random.key(self.seed)
@@ -48,9 +43,12 @@ class AdditionLoader:
 # test by running `poetry run python -m Datasets.addition`
 if __name__ == "__main__":
     num_batches = 100
+    batch_size = 16
     min = 0
     max = 1000000
-    loader = AdditionLoader(min=min, max=max, num_batches=num_batches)
+    loader = AdditionLoader(
+        min=min, max=max, batch_size=batch_size, num_batches=num_batches
+    )
     count = 0
     for batch in loader:
         count += 1
@@ -58,12 +56,10 @@ if __name__ == "__main__":
             batch[0] <= max
         ), "Summands out of range"
         assert batch[0].shape == (
-            common.CONFIG_BATCH_SIZE,
+            batch_size,
             2,
         ), "Incorrect shape of summands array"
-        assert batch[1].shape == (
-            common.CONFIG_BATCH_SIZE,
-        ), "Incorrect shape of sum array"
+        assert batch[1].shape == (batch_size,), "Incorrect shape of sum array"
         assert jax.numpy.all(
             batch[0][:, 0] + batch[0][:, 1] == batch[1]
         ), "Summands added together don't equal the sum"
