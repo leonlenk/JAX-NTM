@@ -5,7 +5,7 @@ import optax
 from flax import linen as nn
 
 from Common import common
-from Memories.MemoryInterface import MemoryInterface
+from Common.MemoryInterface import MemoryInterface
 
 
 class Memory(MemoryInterface, nn.Module):

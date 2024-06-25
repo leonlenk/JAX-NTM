@@ -5,8 +5,8 @@ import jax.numpy as jnp
 from flax import linen as nn
 
 from Common import common
-from Controllers.ControllerInterface import ControllerInterface
-from Memories.MemoryInterface import MemoryInterface
+from Common.ControllerInterface import ControllerInterface
+from Common.MemoryInterface import MemoryInterface
 
 
 def _split_cols(matrix: jax.Array, lengths: Tuple) -> List[jax.Array]:
