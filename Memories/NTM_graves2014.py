@@ -23,11 +23,11 @@ class Memory(MemoryInterface, nn.Module):
             nn.initializers.uniform()
         )  # TODO test different memory bias initializers
         self.memory = self.variable(
-            common.JAX_PARAMS,
-            common.GRAVES2014_MEMORY_BIAS,
+            common.JAX.PARAMS,
+            common.MACHINES.GRAVES2014.MEMORY_BIAS,
             (
                 lambda s, d: memory_bias_initializer(
-                    self.make_rng(common.JAX_PARAMS), s, d
+                    self.make_rng(common.JAX.PARAMS), s, d
                 )
             ),
             (1, self.N, self.M),
@@ -121,7 +121,7 @@ if __name__ == "__main__":
 
     read_weights = jnp.divide(jnp.ones(N), N)
     memory_variables = memory.init(
-        jax.random.key(common.RANDOM_SEED), read_weights, method=Memory.read
+        jax.random.key(common.JAX.RANDOM_SEED), read_weights, method=Memory.read
     )
     # print(memory_variables)
 
@@ -130,7 +130,9 @@ if __name__ == "__main__":
     )
     # print(f'read output: {read_output}')
     expected_read = jnp.average(
-        jnp.array(memory_variables[common.JAX_PARAMS][common.GRAVES2014_MEMORY_BIAS]),
+        jnp.array(
+            memory_variables[common.JAX.PARAMS][common.MACHINES.GRAVES2014.MEMORY_BIAS]
+        ),
         axis=1,
     ).squeeze(0)
     assert (
@@ -147,11 +149,12 @@ if __name__ == "__main__":
         erase_vector,
         add_vector,
         method=Memory.write,
-        mutable=[common.JAX_PARAMS],
+        mutable=[common.JAX.PARAMS],
     )
     # print(write_output_full)
     write_output = cast(
-        Array, write_output_full[1][common.JAX_PARAMS][common.GRAVES2014_MEMORY_BIAS]
+        Array,
+        write_output_full[1][common.JAX.PARAMS][common.MACHINES.GRAVES2014.MEMORY_BIAS],
     )
     expected_write = jnp.ones((1, N, M))
     assert (
