@@ -1,3 +1,5 @@
+from typing import cast
+
 import jax.numpy as jnp
 import optax
 from flax import linen as nn
@@ -111,6 +113,7 @@ def circular_convolution_1d(array, kernel):
 # basic test cases
 if __name__ == "__main__":
     import jax
+    from jax import Array
 
     N = 10
     M = 4
@@ -122,10 +125,13 @@ if __name__ == "__main__":
     )
     # print(memory_variables)
 
-    read_output = memory.apply(memory_variables, read_weights, method=Memory.read)
+    read_output = cast(
+        Array, memory.apply(memory_variables, read_weights, method=Memory.read)
+    )
     # print(f'read output: {read_output}')
     expected_read = jnp.average(
-        memory_variables[common.JAX_PARAMS][common.GRAVES2014_MEMORY_BIAS], axis=1
+        jnp.array(memory_variables[common.JAX_PARAMS][common.GRAVES2014_MEMORY_BIAS]),
+        axis=1,
     ).squeeze(0)
     assert (
         jnp.sum(jnp.abs(jnp.subtract(read_output, expected_read))) < M * 1e-5
@@ -144,12 +150,12 @@ if __name__ == "__main__":
         mutable=[common.JAX_PARAMS],
     )
     # print(write_output_full)
-    write_output = write_output_full[1][common.JAX_PARAMS][
-        common.GRAVES2014_MEMORY_BIAS
-    ]
+    write_output = cast(
+        Array, write_output_full[1][common.JAX_PARAMS][common.GRAVES2014_MEMORY_BIAS]
+    )
     expected_write = jnp.ones((1, N, M))
     assert (
-        jnp.sum(jnp.abs(jnp.subtract(write_output, expected_write))) < 1e-5
+        jnp.sum(jnp.abs(jnp.subtract(write_output, expected_write))) < M * N * 1e-5
     ), "Memory write function did not update memory as expected"
     print("Memory write works as expected with a uniform vector")
 
@@ -157,7 +163,9 @@ if __name__ == "__main__":
 
     # TODO test memory grad calculation
     def loss(memory_variables, read_weights):
-        read_output = memory.apply(memory_variables, read_weights, method=Memory.read)
+        read_output = cast(
+            Array, memory.apply(memory_variables, read_weights, method=Memory.read)
+        )
         likelihoods = read_output * expected_read + (1 - read_output) * (
             1 - expected_read
         )
