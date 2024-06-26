@@ -37,6 +37,7 @@ class DataloaderInterface(ABC):
         self,
         batch_size: int,
         num_batches: int,
+        memory_shape: tuple,
         curriculum_scheduler: CurriculumSchedulerInterface,
         seed: int = globals.JAX.RANDOM_SEED,
     ):
@@ -49,6 +50,7 @@ class DataloaderInterface(ABC):
         """
         self.batch_size = batch_size
         self.num_batches = num_batches
+        self.memory_shape = memory_shape
         self.curriculum_scheduler = curriculum_scheduler
         self.prng = jax.random.key(seed)
         self.iterations = 0
