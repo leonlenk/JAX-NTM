@@ -1,6 +1,12 @@
 import jax
 
-from Common import common
+from Common import globals
+
+# TODO
+# change the randint stuff to jax.random.choice with an array of difficulties and an array of probabilities for each
+# create a new common class for holding those two arrays?
+# make it auto-generate the arrays given a min/max or given a min/max + target + weights or something?
+# add a function to update the range
 
 
 class AdditionLoader:
@@ -10,7 +16,7 @@ class AdditionLoader:
     where the first is the summands and the second is the sum. Thus it is of the form (data, label)
     """
 
-    seed: int = common.JAX.RANDOM_SEED
+    seed: int = globals.JAX.RANDOM_SEED
 
     def __init__(self, min: int, max: int, batch_size: int, num_batches: int):
         self.min = min
