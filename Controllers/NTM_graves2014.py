@@ -14,11 +14,9 @@ def _split_cols(matrix: jax.Array, lengths: Tuple) -> List[jax.Array]:
     assert jnp.size(matrix, axis=1) == sum(
         lengths
     ), "Lengths must be summed to num columns"
-    length_indices = jnp.cumsum(jnp.asarray((0,) + lengths))
-    results = []
-    for start, end in zip(length_indices[:-1], length_indices[1:]):
-        results += [matrix[:, start:end]]
-    return results
+    length_indices = jnp.cumsum(jnp.asarray(lengths))[:-1]
+
+    return jnp.split(matrix, length_indices, axis=-1)
 
 
 @ControllerInterface.register
@@ -119,21 +117,22 @@ class NTMWriteController(NTMControllerTemplate):
         :param embeddings: input representation of the model.
         :param w_prev: previous step state
         """
-        memory_addresses = nn.Dense(
+        memory_components = nn.Dense(
             sum(self.write_lengths),
             kernel_init=self.weight_initializer,
             bias_init=self.bias_initializer,
         )(embeddings)
-        k, β, g, s, y, e, a = _split_cols(memory_addresses, self.write_lengths)
+        k, β, g, s, y, erase, add_weight = _split_cols(
+            memory_components, self.write_lengths
+        )
 
-        # TODO: what is e?
         # e should be in [0, 1]
-        e = nn.sigmoid(e)
+        erase_weight = nn.sigmoid(erase)
 
         # TODO: what is a?
         # Write to memory
         memory_addresses = self._address_memory(k, β, g, s, y, w_prev)
-        self.memory.write(memory_addresses, e, a)
+        self.memory.write(memory_addresses, erase_weight, add_weight)
 
         return memory_addresses
 
