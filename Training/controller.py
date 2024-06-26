@@ -76,4 +76,6 @@ if __name__ == "__main__":
         write_controller, key2, shape, learning_rate
     )
 
+    print(f"{write_controller_state=}")
+
     train_and_eval(read_controller_state, write_controller_state, 2, shape)

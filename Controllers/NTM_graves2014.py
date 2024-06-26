@@ -4,6 +4,7 @@ import jax
 import jax.numpy as jnp
 from flax import linen as nn
 
+from Common import globals
 from Common.ControllerInterface import ControllerInterface
 from Common.MemoryInterface import MemoryInterface
 
@@ -131,7 +132,16 @@ class NTMWriteController(NTMControllerTemplate):
         # TODO: what is a?
         # Write to memory
         memory_addresses = self._address_memory(k, β, g, s, y, w_prev)
-        self.memory.write(memory_addresses, erase_weight, add_weight)
+        # self.memory.write(memory_addresses, erase_weight, add_weight)
+        self.memory.apply(
+            # self.variables,
+            {globals.JAX.PARAMS: self.get_variable(globals.JAX.PARAMS, "memory")},
+            memory_addresses,
+            erase_weight,
+            add_weight,
+            method=MemoryInterface.write,
+            mutable=[globals.JAX.PARAMS],
+        )
 
         return memory_addresses
 
