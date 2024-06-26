@@ -1,10 +1,11 @@
 from abc import ABC, abstractmethod
 
 import jax.numpy as jnp
+from flax import linen as nn
 from jax import Array
 
 
-class MemoryInterface(ABC):
+class MemoryInterface(ABC, nn.Module):
     @abstractmethod
     def size(self) -> tuple[int, int]:
         pass

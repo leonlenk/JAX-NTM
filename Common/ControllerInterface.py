@@ -1,9 +1,10 @@
 from abc import ABC, abstractmethod
 
+from flax import linen as nn
 from jax import Array
 
 
-class ControllerInterface(ABC):
+class ControllerInterface(ABC, nn.Module):
     @abstractmethod
     def setup(self) -> None:
         pass

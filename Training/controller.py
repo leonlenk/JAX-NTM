@@ -4,7 +4,7 @@ import optax
 from flax.training import train_state
 from tqdm import tqdm
 
-from Common import common
+from Common import globals
 from Controllers.NTM_graves2014 import NTMReadController, NTMWriteController
 from Memories.NTM_graves2014 import Memory
 
@@ -15,7 +15,7 @@ def init_train_state(
     variables = model.init(random_key, jnp.ones(shape), jnp.ones(shape))
     optimizer = optax.adam(learning_rate)
     return train_state.TrainState.create(
-        apply_fn=model.apply, tx=optimizer, params=variables[common.JAX_PARAMS]
+        apply_fn=model.apply, tx=optimizer, params=variables[globals.JAX.PARAMS]
     )
 
 
@@ -26,9 +26,9 @@ def train_step(
     previous_state: jax.Array,
 ):
     def loss_fn(read_params, write_params):
-        write_state.apply_fn({common.JAX_PARAMS: write_params}, batch, previous_state)
+        write_state.apply_fn({globals.JAX.PARAMS: write_params}, batch, previous_state)
         predictions = read_state.apply_fn(
-            {common.JAX_PARAMS: read_params}, batch, previous_state
+            {globals.JAX.PARAMS: read_params}, batch, previous_state
         )
         loss = optax.losses.squared_error(predictions=predictions, targets=batch)
         return loss
@@ -43,7 +43,7 @@ def train_step(
 def train_and_eval(read_state, write_state, epochs, shape):
     previous_state = jnp.ones(shape)
     pbar = tqdm(range(1, epochs + 1))
-    data_key = jax.random.key(common.RANDOM_SEED)
+    data_key = jax.random.key(globals.JAX.RANDOM_SEED)
     for epoch in pbar:
         pbar.set_description(f"Epoch {epoch}:")
         batch_key, data_key = jax.random.split(data_key)
@@ -66,7 +66,7 @@ if __name__ == "__main__":
     read_controller = NTMReadController(memory_model)
     write_controller = NTMWriteController(memory_model)
 
-    rng_key = jax.random.key(common.RANDOM_SEED)
+    rng_key = jax.random.key(globals.JAX.RANDOM_SEED)
     key1, key2 = jax.random.split(rng_key)
 
     read_controller_state = init_train_state(
