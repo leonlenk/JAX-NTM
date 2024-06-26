@@ -93,7 +93,7 @@ class Memory(MemoryInterface, nn.Module):
     def _shift(self, gated_weighting, shift_weighting):
         """arXiv:1410.5401 equation 8"""
         return circular_convolution_1d(
-            gated_weighting.squeeze(0), shift_weighting.squeeze(0)
+            gated_weighting.squeeze(), shift_weighting.squeeze()
         )
 
     def _sharpen(self, weights, sharpen_scalar):

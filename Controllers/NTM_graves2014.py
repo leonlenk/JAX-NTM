@@ -11,7 +11,7 @@ from Common.MemoryInterface import MemoryInterface
 
 def _split_cols(matrix: jax.Array, lengths: Tuple) -> List[jax.Array]:
     """Split a 2D matrix to variable length columns."""
-    assert jnp.size(matrix, axis=1) == sum(
+    assert jnp.size(matrix, axis=-1) == sum(
         lengths
     ), "Lengths must be summed to num columns"
     length_indices = jnp.cumsum(jnp.asarray(lengths))[:-1]
@@ -45,7 +45,7 @@ class NTMControllerTemplate(nn.Module):
         k = k.copy()
         β = nn.softplus(β)
         g = nn.sigmoid(g)
-        s = nn.softmax(s, axis=1)
+        s = nn.softmax(s, axis=-1)
         y = 1 + nn.softplus(y)
 
         w = self.memory.address(k, β, g, s, y, w_prev)
@@ -72,8 +72,8 @@ class NTMReadController(NTMControllerTemplate):
     def __call__(self, embeddings: jax.Array, w_prev: jax.Array):
         """NTMReadController forward function.
 
-        :param embeddings: input representation of the controller.
-        :param w_prev: previous step state
+        :param embeddings: input representation of the model.
+        :param w_prev: [1xm] previous step state
         """
         memory_addresses = nn.Dense(
             sum(self.read_lengths),
@@ -115,7 +115,7 @@ class NTMWriteController(NTMControllerTemplate):
         """NTMWriteController forward function.
 
         :param embeddings: input representation of the model.
-        :param w_prev: previous step state
+        :param w_prev: [1xm] previous step state
         """
         memory_components = nn.Dense(
             sum(self.write_lengths),
