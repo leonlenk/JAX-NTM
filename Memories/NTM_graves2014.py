@@ -4,7 +4,7 @@ import jax.numpy as jnp
 import optax
 from flax import linen as nn
 
-from Common import common
+from Common import globals
 from Common.MemoryInterface import MemoryInterface
 
 
@@ -23,11 +23,11 @@ class Memory(MemoryInterface, nn.Module):
             nn.initializers.uniform()
         )  # TODO test different memory bias initializers
         self.memory = self.variable(
-            common.JAX.PARAMS,
-            common.MACHINES.GRAVES2014.MEMORY_BIAS,
+            globals.JAX.PARAMS,
+            globals.MACHINES.GRAVES2014.MEMORY_BIAS,
             (
                 lambda s, d: memory_bias_initializer(
-                    self.make_rng(common.JAX.PARAMS), s, d
+                    self.make_rng(globals.JAX.PARAMS), s, d
                 )
             ),
             (1, self.N, self.M),
@@ -121,7 +121,7 @@ if __name__ == "__main__":
 
     read_weights = jnp.divide(jnp.ones(N), N)
     memory_variables = memory.init(
-        jax.random.key(common.JAX.RANDOM_SEED), read_weights, method=Memory.read
+        jax.random.key(globals.JAX.RANDOM_SEED), read_weights, method=Memory.read
     )
     # print(memory_variables)
 
@@ -131,7 +131,9 @@ if __name__ == "__main__":
     # print(f'read output: {read_output}')
     expected_read = jnp.average(
         jnp.array(
-            memory_variables[common.JAX.PARAMS][common.MACHINES.GRAVES2014.MEMORY_BIAS]
+            memory_variables[globals.JAX.PARAMS][
+                globals.MACHINES.GRAVES2014.MEMORY_BIAS
+            ]
         ),
         axis=1,
     ).squeeze(0)
@@ -149,12 +151,14 @@ if __name__ == "__main__":
         erase_vector,
         add_vector,
         method=Memory.write,
-        mutable=[common.JAX.PARAMS],
+        mutable=[globals.JAX.PARAMS],
     )
     # print(write_output_full)
     write_output = cast(
         Array,
-        write_output_full[1][common.JAX.PARAMS][common.MACHINES.GRAVES2014.MEMORY_BIAS],
+        write_output_full[1][globals.JAX.PARAMS][
+            globals.MACHINES.GRAVES2014.MEMORY_BIAS
+        ],
     )
     expected_write = jnp.ones((1, N, M))
     assert (

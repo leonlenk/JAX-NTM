@@ -2,7 +2,7 @@ import jax.numpy as jnp
 from flax import linen as nn
 from jax import Array
 
-from Common import common
+from Common import globals
 from Controllers.NTM_graves2014 import NTMReadController, NTMWriteController
 from Memories.NTM_graves2014 import Memory
 from Models.NTM_graves2014 import LSTMModel
@@ -27,7 +27,7 @@ class NTM(nn.Module):
         for i in range(len(self.read_controllers)):
             self.read_controller_biases.append(
                 self.param(
-                    f"{common.GRAVES2014_READ_CONTROLLER_BIAS}{i}",
+                    f"{globals.MACHINES.GRAVES2014.READ_CONTROLLER_BIAS}{i}",
                     controller_bias_initializer,
                     (1, self.M),
                 )

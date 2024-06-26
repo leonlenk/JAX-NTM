@@ -5,7 +5,7 @@ from jax.typing import ArrayLike
 from tqdm import tqdm
 
 import wandb
-from Common import common
+from Common import globals
 
 
 def average_metric(metrics: list[dict]) -> dict:
@@ -32,7 +32,7 @@ def train(
     wandb_run_name: str | None = None,
 ) -> ArrayLike:
     assert (
-        common.CONFIG.EPOCHS in train_config
+        globals.CONFIG.EPOCHS in train_config
     ), "The number of epochs to train is a required config"
 
     if val_dataset is not None or val_step is not None:
@@ -43,12 +43,12 @@ def train(
     wandb.init(
         project=project_name,
         name=wandb_run_name,
-        job_type=common.WANDB.JOBS.TRAIN,
+        job_type=globals.WANDB.JOBS.TRAIN,
         config=train_config,
         tags=wandb_tags,
     )
 
-    for epoch in tqdm(range(1, train_config[common.CONFIG.EPOCHS] + 1)):
+    for epoch in tqdm(range(1, train_config[globals.CONFIG.EPOCHS] + 1)):
         # train the model on each batch
         train_metrics: list[dict] = []
         for data in tqdm(train_dataset):
@@ -61,7 +61,7 @@ def train(
         train_metric = metric_aggregator(train_metrics)
         wandb.log(
             {
-                f"{common.WANDB.LOGS.TRAIN}_{key}": train_metric[key]
+                f"{globals.WANDB.LOGS.TRAIN}_{key}": train_metric[key]
                 for key in train_metric
             },
             step=epoch,
@@ -70,8 +70,8 @@ def train(
         # perform validation if desired
         if val_dataset is not None and val_step is not None:
             if (
-                common.CONFIG.VAL_PERIOD not in train_config
-                or epoch % train_config[common.CONFIG.VAL_PERIOD] == 0
+                globals.CONFIG.VAL_PERIOD not in train_config
+                or epoch % train_config[globals.CONFIG.VAL_PERIOD] == 0
             ):
                 val_metrics: list[dict] = []
                 for data in tqdm(train_dataset):
@@ -83,7 +83,7 @@ def train(
                 val_metric = metric_aggregator(val_metrics)
                 wandb.log(
                     {
-                        f"{common.WANDB.LOGS.VAL}_{key}": val_metric[key]
+                        f"{globals.WANDB.LOGS.VAL}_{key}": val_metric[key]
                         for key in val_metric
                     },
                     step=epoch,
@@ -102,8 +102,8 @@ if __name__ == "__main__":
     import time
 
     train_config = {
-        common.CONFIG.EPOCHS: 5,
-        common.CONFIG.LEARNING_RATE: 1e-4,
+        globals.CONFIG.EPOCHS: 5,
+        globals.CONFIG.LEARNING_RATE: 1e-4,
     }
     state = 1
     dataset = range(3)
@@ -111,15 +111,15 @@ if __name__ == "__main__":
     def train_step(state, data, train_config):
         time.sleep(0.3)
         metrics = {}
-        metrics[common.METRICS.LOSS] = random.uniform(0, 1 / state)
-        metrics[common.METRICS.ACCURACY] = random.uniform(0, 1 - 1 / state)
+        metrics[globals.METRICS.LOSS] = random.uniform(0, 1 / state)
+        metrics[globals.METRICS.ACCURACY] = random.uniform(0, 1 - 1 / state)
         return state + 1, metrics
 
     output_state = train(
-        project_name=common.WANDB.PROJECTS.CODE_TESTING,
+        project_name=globals.WANDB.PROJECTS.CODE_TESTING,
         train_config=train_config,
         state=state,
         train_step=train_step,
         train_dataset=dataset,
-        wandb_tags=[common.WANDB.TAGS.CODE_TESTING],
+        wandb_tags=[globals.WANDB.TAGS.CODE_TESTING],
     )

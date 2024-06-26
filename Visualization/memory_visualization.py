@@ -4,7 +4,7 @@ import jax.numpy as jnp
 from jax import Array
 from PIL import Image, ImageDraw, ImageFont
 
-from Common import common
+from Common import globals
 
 # memory block display size
 pixel_scale = 128
@@ -45,7 +45,7 @@ def plot_memory_state_comparison(
         img.paste(memory_img_2, (memory_img_1.width, 0))
 
     if save_location:
-        img.save(get_save_path(save_location, common.VISUALIZATION.IMG_EXTENSION))
+        img.save(get_save_path(save_location, globals.VISUALIZATION.IMG_EXTENSION))
 
     return img
 
@@ -79,7 +79,9 @@ def plot_memory_states_gif(
         )
 
     if save_location:
-        save_location = get_save_path(save_location, common.VISUALIZATION.GIF_EXTENSION)
+        save_location = get_save_path(
+            save_location, globals.VISUALIZATION.GIF_EXTENSION
+        )
         memory_state_gif[0].save(
             save_location,
             save_all=True,
@@ -193,7 +195,7 @@ def plot_memory_state(
         img = plot_fuzzy_attention(img, attention)
 
     if save_location:
-        img.save(get_save_path(save_location, common.VISUALIZATION.IMG_EXTENSION))
+        img.save(get_save_path(save_location, globals.VISUALIZATION.IMG_EXTENSION))
 
     return img
 
@@ -204,7 +206,7 @@ def get_save_path(save_location: str, suffix: str):
         save_loc_path = save_loc_path.with_suffix(suffix)
 
     if not save_loc_path.is_absolute():
-        save_loc_path = Path(common.VISUALIZATION.OUTPUT_DIR / save_loc_path)
+        save_loc_path = Path(globals.VISUALIZATION.OUTPUT_DIR / save_loc_path)
 
     save_loc_path.parent.mkdir(parents=True, exist_ok=True)
     return str(save_loc_path)

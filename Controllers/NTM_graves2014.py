@@ -4,7 +4,6 @@ import jax
 import jax.numpy as jnp
 from flax import linen as nn
 
-from Common import common
 from Common.ControllerInterface import ControllerInterface
 from Common.MemoryInterface import MemoryInterface
 
@@ -139,6 +138,7 @@ class NTMWriteController(NTMControllerTemplate):
 
 # TODO: add test cases
 if __name__ == "__main__":
+    from Common import globals
     from Memories.NTM_graves2014 import Memory
 
     test_n = 8
@@ -148,7 +148,7 @@ if __name__ == "__main__":
     read_controller = NTMReadController(memory_model)
     write_controller = NTMWriteController(memory_model)
 
-    rng_key = jax.random.key(common.JAX.RANDOM_SEED)
+    rng_key = jax.random.key(globals.JAX.RANDOM_SEED)
     key1, key2 = jax.random.split(rng_key)
 
     read_controller_variables = read_controller.init(
