@@ -3,6 +3,7 @@ from typing import List, Tuple
 import jax
 import jax.numpy as jnp
 from flax import linen as nn
+from flax.training import train_state
 
 from Common import globals
 from Common.ControllerInterface import ControllerInterface
@@ -23,16 +24,13 @@ def _split_cols(matrix: jax.Array, lengths: Tuple) -> List[jax.Array]:
 class NTMControllerTemplate(nn.Module):
     """An NTM Read/Write Controller."""
 
-    memory: MemoryInterface
+    N_dim_memory: int
+    M_dim_memory: int
 
     def setup(self):
-        # TODO: figure out memory typing
-        """Initilize the read/write controller.
-
-        :param memory: The memory object to be addressed by the controller.
         """
-        self.N_dim_memory, self.M_dim_memory = self.memory.size()
-
+        Initilize the read/write controller.
+        """
         # xavier uniform initialization but with a gain of 1.4
         self.weight_initializer = nn.initializers.variance_scaling(
             scale=1.4, mode="fan_avg", distribution="uniform"
@@ -40,7 +38,7 @@ class NTMControllerTemplate(nn.Module):
         self.bias_initializer = nn.initializers.normal(stddev=0.01)
 
     # TODO: give better variable names and add type annotations
-    def _address_memory(self, k, β, g, s, y, w_prev):
+    def _address_memory(self, k, β, g, s, y, w_prev, memory_state, memory_model):
         # Handle Activations
         k = k.copy()
         β = nn.softplus(β)
@@ -48,7 +46,16 @@ class NTMControllerTemplate(nn.Module):
         s = nn.softmax(s, axis=-1)
         y = 1 + nn.softplus(y)
 
-        w = self.memory.address(k, β, g, s, y, w_prev)
+        w = memory_state.apply_fn(
+            {globals.JAX.PARAMS: memory_state.params},
+            k,
+            β,
+            g,
+            s,
+            y,
+            w_prev,
+            method=memory_model.address,
+        )
 
         return w
 
@@ -69,7 +76,13 @@ class NTMReadController(NTMControllerTemplate):
 
     # TODO: figure out type annotations
     @nn.compact
-    def __call__(self, embeddings: jax.Array, w_prev: jax.Array):
+    def __call__(
+        self,
+        embeddings: jax.Array,
+        w_prev: jax.Array,
+        memory_state: train_state.TrainState,
+        memory_model: MemoryInterface,
+    ):
         """NTMReadController forward function.
 
         :param embeddings: input representation of the model.
@@ -83,8 +96,15 @@ class NTMReadController(NTMControllerTemplate):
         k, β, g, s, y = _split_cols(memory_addresses, self.read_lengths)
 
         # Read from memory
-        memory_locations = self._address_memory(k, β, g, s, y, w_prev)
-        memory_data = self.memory.read(memory_locations)
+        memory_locations = self._address_memory(
+            k, β, g, s, y, w_prev, memory_state, memory_model
+        )
+
+        memory_data = memory_state.apply_fn(
+            {globals.JAX.PARAMS: memory_state.params},
+            memory_locations,
+            method=memory_model.read,
+        )
 
         return memory_data, memory_locations
 
@@ -111,7 +131,13 @@ class NTMWriteController(NTMControllerTemplate):
 
     # TODO: figure out type annotations
     @nn.compact
-    def __call__(self, embeddings: jax.Array, w_prev: jax.Array):
+    def __call__(
+        self,
+        embeddings: jax.Array,
+        w_prev: jax.Array,
+        memory_state: train_state.TrainState,
+        memory_model: MemoryInterface,
+    ):
         """NTMWriteController forward function.
 
         :param embeddings: input representation of the model.
@@ -129,17 +155,17 @@ class NTMWriteController(NTMControllerTemplate):
         # e should be in [0, 1]
         erase_weight = nn.sigmoid(erase)
 
-        # TODO: what is a?
         # Write to memory
-        memory_addresses = self._address_memory(k, β, g, s, y, w_prev)
-        # self.memory.write(memory_addresses, erase_weight, add_weight)
-        self.memory.apply(
-            # self.variables,
-            {globals.JAX.PARAMS: self.get_variable(globals.JAX.PARAMS, "memory")},
+        memory_addresses = self._address_memory(
+            k, β, g, s, y, w_prev, memory_state, memory_model
+        )
+
+        memory_state.apply_fn(
+            {globals.JAX.PARAMS: memory_state.params},
             memory_addresses,
             erase_weight,
             add_weight,
-            method=MemoryInterface.write,
+            method=memory_model.write,
             mutable=[globals.JAX.PARAMS],
         )
 
@@ -155,18 +181,24 @@ if __name__ == "__main__":
     test_m = 9
     test_model_feature_size = 10
     memory_model = Memory(test_n, test_m)
-    read_controller = NTMReadController(memory_model)
-    write_controller = NTMWriteController(memory_model)
+    read_controller = NTMReadController(*memory_model.size())
+    write_controller = NTMWriteController(*memory_model.size())
 
     rng_key = jax.random.key(globals.JAX.RANDOM_SEED)
     key1, key2 = jax.random.split(rng_key)
 
     read_controller_variables = read_controller.init(
-        key1, jnp.ones((1, test_model_feature_size)), jnp.ones((1, test_n))
+        key1,
+        jnp.ones((1, test_model_feature_size)),
+        jnp.ones((1, test_n)),
+        memory_model,
     )
     print("Initialized read controller")
     write_controller_variables = write_controller.init(
-        key2, jnp.ones((1, test_model_feature_size)), jnp.ones((1, test_n))
+        key2,
+        jnp.ones((1, test_model_feature_size)),
+        jnp.ones((1, test_n)),
+        memory_model,
     )
     print("Initialized write controller")
 

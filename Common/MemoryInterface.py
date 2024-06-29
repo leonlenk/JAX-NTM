@@ -8,17 +8,17 @@ from jax import Array
 class MemoryInterface(ABC, nn.Module):
     @abstractmethod
     def size(self) -> tuple[int, int]:
-        pass
+        raise NotImplementedError
 
     @abstractmethod
     def read(self, read_weights: Array) -> Array:
-        pass
+        raise NotImplementedError
 
     @abstractmethod
     def write(
         self, read_weights: Array, erase_vector: Array, add_vector: Array
     ) -> None:
-        pass
+        raise NotImplementedError
 
     @abstractmethod
     def address(
@@ -30,7 +30,7 @@ class MemoryInterface(ABC, nn.Module):
         sharpen_scalar: Array,
         previous_weights: Array,
     ) -> Array:
-        pass
+        raise NotImplementedError
 
 
 class MemoryStub(MemoryInterface):
