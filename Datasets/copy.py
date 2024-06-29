@@ -1,7 +1,6 @@
 import jax
 import jax.numpy as jnp
 
-from Common import globals
 from Common.TrainingInterfaces import DataloaderInterface
 
 # TODO assert memory_shape is at least 2D on init?
@@ -12,15 +11,12 @@ class CopyLoader(DataloaderInterface):
         self.curriculum_scheduler.update_curriculum_level(curriculum_params)
 
     def __next__(self):
-        """For each item, create an array of random 0s and 1s with size
-        (memory_depth - 1, curriculum_level - 1)
-        then add a final delimiter column with all 0s except for a 1 at (memory_depth, curriculum_level)
-        then pad with zeros until the item is of size (memory_depth, max_curriculum_level)
-        finally, combine all items together into an array of size (batch_size, memory_depth, max_curriculum_level)
+        """Returns an input and a target, both of size (batch_size, memory_depth, max_curriculum_level).
+        Each item in the batch will have an array of random 0s and 1s with size (memory_depth - 1, curriculum_level - 1).
+        Aside from this, all values in the array will be zero for the target.
+        The input is the same as the target except for the inclusion of the delimiter (value 1) at location (memory_depth, curriculum_level).
 
-        The expected output is the same array, but with the 1 in the delimiter column equal to zero.
-
-        This is actually done by creating the full size array and then zeroing out each section.
+        This is implemented by first creating the full size array and then zeroing out each section.
         """
         if self.iterations >= self.num_batches:
             raise StopIteration
@@ -56,15 +52,16 @@ class CopyLoader(DataloaderInterface):
 
 
 if __name__ == "__main__":
+    from Common.globals import CURRICULUM
     from Training.Curriculum_zaremba2014 import CurriculumSchedulerZaremba2014
 
     config = {
-        globals.CURRICULUM.OPTIONS.ACCURACY_THRESHOLD: 0.9,
-        globals.CURRICULUM.OPTIONS.MIN: 1,
-        globals.CURRICULUM.OPTIONS.MAX: 20,
-        globals.CURRICULUM.OPTIONS.ZAREMBA2014.P1: 0.10,
-        globals.CURRICULUM.OPTIONS.ZAREMBA2014.P2: 0.25,
-        globals.CURRICULUM.OPTIONS.ZAREMBA2014.P3: 0.65,
+        CURRICULUM.OPTIONS.ACCURACY_THRESHOLD: 0.9,
+        CURRICULUM.OPTIONS.MIN: 1,
+        CURRICULUM.OPTIONS.MAX: 20,
+        CURRICULUM.OPTIONS.ZAREMBA2014.P1: 0.10,
+        CURRICULUM.OPTIONS.ZAREMBA2014.P2: 0.25,
+        CURRICULUM.OPTIONS.ZAREMBA2014.P3: 0.65,
     }
 
     batch_size = 7
@@ -82,7 +79,7 @@ if __name__ == "__main__":
         assert len(target.shape) == 3
 
     curriculum_params = {
-        globals.CURRICULUM.PARAMS.ACCURACY: 0.95,
+        CURRICULUM.PARAMS.ACCURACY: 0.95,
     }
 
     copy_loader.update_curriculum_level(curriculum_params)
