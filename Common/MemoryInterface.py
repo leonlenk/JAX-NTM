@@ -7,22 +7,23 @@ from jax import Array
 
 class MemoryInterface(ABC, nn.Module):
     @abstractmethod
-    def size(self) -> tuple[int, int]:
-        raise NotImplementedError
-
-    @abstractmethod
-    def read(self, read_weights: Array) -> Array:
+    def read(self, memory_weights: Array, read_weights: Array) -> Array:
         raise NotImplementedError
 
     @abstractmethod
     def write(
-        self, read_weights: Array, erase_vector: Array, add_vector: Array
-    ) -> None:
+        self,
+        memory_weights: Array,
+        read_weights: Array,
+        erase_vector: Array,
+        add_vector: Array,
+    ) -> Array:
         raise NotImplementedError
 
     @abstractmethod
     def address(
         self,
+        memory_weights: Array,
         key_vector: Array,
         key_strength: Array,
         interp_gate_scalar: Array,
