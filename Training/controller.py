@@ -38,7 +38,7 @@ def train_step(
     previous_state: jax.Array,
 ):
     def loss_fn(read_params, write_params, memory_weights):
-        memory_weights, memory_addresses = write_state.apply_fn(
+        written_memory_weights, write_memory_addresses = write_state.apply_fn(
             {globals.JAX.PARAMS: write_params},
             batch,
             previous_state,
@@ -46,17 +46,22 @@ def train_step(
             memory_model,
         )
 
-        predictions, memory_addresses = read_state.apply_fn(
+        predictions, read_memory_addresses = read_state.apply_fn(
             {globals.JAX.PARAMS: read_params},
             batch,
             previous_state,
-            memory_weights,
+            written_memory_weights,
             memory_model,
         )
 
         loss = jnp.mean(
             optax.losses.squared_error(predictions=predictions, targets=batch)
         )
+        if loss < 0.01:
+            # print(f'{memory_weights=}')
+            # print(f'{written_memory_weights=}')
+            print(f"{write_memory_addresses=}")
+            print(f"{read_memory_addresses=}")
         return loss
 
     gradient_fn = jax.value_and_grad(loss_fn, argnums=(0, 1, 2))
@@ -77,14 +82,14 @@ def train_and_eval(
     previous_state = jnp.ones(shape)
     pbar = tqdm(range(1, epochs + 1))
     # TODO update training to get random.uniform batches to converge?
-    # data_key = jax.random.key(globals.JAX.RANDOM_SEED)
+    data_key = jax.random.key(globals.JAX.RANDOM_SEED)
     for epoch in pbar:
         pbar.set_description(f"Epoch {epoch}:")
 
         # TODO update training to get random.uniform batches to converge?
-        # batch_key, data_key = jax.random.split(data_key)
-        # batch = jax.random.uniform(batch_key, batch_shape)
-        batch = jnp.ones(batch_shape)
+        batch_key, data_key = jax.random.split(data_key)
+        batch = jax.random.uniform(batch_key, batch_shape, minval=0.5, maxval=1)
+        # batch = jnp.ones(batch_shape)
         read_state, write_state, memory_weights, loss = train_step(
             read_state, write_state, memory_weights, memory_model, batch, previous_state
         )
@@ -93,10 +98,10 @@ def train_and_eval(
 
 if __name__ == "__main__":
     test_n = 8
-    test_m = 9
+    test_m = 3
     test_model_feature_size = 10
     learning_rate = 5e-3
-    batch_size = 32
+    # batch_size = 8
     shape = (1, test_n)
     batch_shape = (1, test_m)
     num_epochs = 1000
@@ -106,9 +111,12 @@ if __name__ == "__main__":
     write_controller = NTMWriteController(test_n, test_m)
 
     rng_key = jax.random.key(globals.JAX.RANDOM_SEED)
-    key1, key2, key3 = jax.random.split(rng_key, num=3)
+    key1, key2, key3, key4 = jax.random.split(rng_key, num=4)
 
-    memory_weights = jnp.zeros((1, test_n, test_m))
+    # memory_weights = jnp.zeros((1, test_n, test_m))
+    memory_weights = jax.random.uniform(
+        key4, (1, test_n, test_m), minval=0, maxval=0.01
+    )
 
     memory_variables = memory_model.init(
         key3, memory_weights, jnp.ones(shape), method=Memory.read
