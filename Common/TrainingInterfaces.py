@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 
 import jax
+import jax.numpy as jnp
 from jax import Array
 
 from Common import globals
@@ -91,3 +92,16 @@ class DataloaderInterface(ABC):
     def __next__(self) -> tuple[jax.Array, jax.Array]:
         """Gets (or creates) the next batch in the dataset."""
         pass
+
+
+class CurriculumSchedulerStub(CurriculumSchedulerInterface):
+    """Stub CurriculumScheduler which always returns difficulties of 1"""
+
+    def __init__(self, config: dict = {}):
+        self.config = config
+
+    def update_curriculum_level(self, curriculum_params: dict):
+        pass
+
+    def get_curriculum(self, batch_size: int) -> Array:
+        return jnp.ones((batch_size,))
