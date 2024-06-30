@@ -95,8 +95,12 @@ def train_and_eval(
         )
         pbar.set_postfix(loss=f"{loss:.2f}")
 
+    return read_state, write_state, memory_weights
+
 
 if __name__ == "__main__":
+    from Common.MemoryInterface import MemoryVisualizerWrapper
+
     test_n = 8
     test_m = 3
     test_model_feature_size = 10
@@ -104,7 +108,7 @@ if __name__ == "__main__":
     # batch_size = 8
     shape = (1, test_n)
     batch_shape = (1, test_m)
-    num_epochs = 1000
+    num_epochs = 500
 
     memory_model = Memory()
     read_controller = NTMReadController(test_n, test_m)
@@ -143,6 +147,22 @@ if __name__ == "__main__":
         learning_rate,
     )
 
+    read_controller_state, write_controller_state, memory_weights = train_and_eval(
+        read_controller_state,
+        write_controller_state,
+        memory_weights,
+        memory_model,
+        num_epochs,
+        shape,
+        batch_shape,
+    )
+
+    # test out the memory visualization wrapper with a smaller number of epochs
+    # outputs to Visualization_Outputs/training_test/
+
+    memory_model = MemoryVisualizerWrapper(memory_model, "training_test")
+
+    num_epochs = 2
     train_and_eval(
         read_controller_state,
         write_controller_state,

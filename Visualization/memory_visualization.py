@@ -115,7 +115,7 @@ def plot_fuzzy_attention(
     draw = ImageDraw.ImageDraw(img, "RGBA")
 
     for i in range(attention.shape[0]):
-        val = float(attention[i])
+        val = float(attention[i].item())
         x0 = padding_edges[0] + i * (pixel_scale + padding_interior)
         y0 = padding_edges[2]
         draw.rectangle(
@@ -176,7 +176,7 @@ def plot_memory_state(
 
     for i in range(N):
         for j in range(M):
-            val = float(memory[i, j])
+            val = float(memory[i, j].item())
             x0 = padding_edges[0] + i * (pixel_scale + padding_interior)
             y0 = padding_edges[2] + j * (pixel_scale + padding_interior)
             draw.rectangle(

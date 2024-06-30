@@ -27,6 +27,12 @@ class VISUALIZATION:
     GIF_EXTENSION = ".gif"
     IMG_EXTENSION = ".png"
 
+    class NAMES:
+        DEFAULT = "memory"
+        READ = "read"
+        WRITE = "write"
+        ADDRESS = "address"
+
 
 # Training Configuration (Hyperparameters)
 class CONFIG:
