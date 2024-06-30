@@ -1,27 +1,29 @@
 from abc import ABC, abstractmethod
 
 import jax.numpy as jnp
+from flax import linen as nn
 from jax import Array
 
 
-class MemoryInterface(ABC):
+class MemoryInterface(ABC, nn.Module):
     @abstractmethod
-    def size(self) -> tuple[int, int]:
-        pass
-
-    @abstractmethod
-    def read(self, read_weights: Array) -> Array:
-        pass
+    def read(self, memory_weights: Array, read_weights: Array) -> Array:
+        raise NotImplementedError
 
     @abstractmethod
     def write(
-        self, read_weights: Array, erase_vector: Array, add_vector: Array
-    ) -> None:
-        pass
+        self,
+        memory_weights: Array,
+        read_weights: Array,
+        erase_vector: Array,
+        add_vector: Array,
+    ) -> Array:
+        raise NotImplementedError
 
     @abstractmethod
     def address(
         self,
+        memory_weights: Array,
         key_vector: Array,
         key_strength: Array,
         interp_gate_scalar: Array,
@@ -29,7 +31,7 @@ class MemoryInterface(ABC):
         sharpen_scalar: Array,
         previous_weights: Array,
     ) -> Array:
-        pass
+        raise NotImplementedError
 
 
 class MemoryStub(MemoryInterface):

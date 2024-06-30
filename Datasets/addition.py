@@ -2,7 +2,11 @@ import jax
 
 from Common import globals
 
-# TODO update to implement the DataloaderInterface
+# TODO
+# change the randint stuff to jax.random.choice with an array of difficulties and an array of probabilities for each
+# create a new common class for holding those two arrays?
+# make it auto-generate the arrays given a min/max or given a min/max + target + weights or something?
+# add a function to update the range
 
 
 class AdditionLoader:

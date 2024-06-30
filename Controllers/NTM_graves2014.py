@@ -4,36 +4,32 @@ import jax
 import jax.numpy as jnp
 from flax import linen as nn
 
+from Common import globals
 from Common.ControllerInterface import ControllerInterface
 from Common.MemoryInterface import MemoryInterface
 
 
 def _split_cols(matrix: jax.Array, lengths: Tuple) -> List[jax.Array]:
     """Split a 2D matrix to variable length columns."""
-    assert jnp.size(matrix, axis=1) == sum(
+    assert jnp.size(matrix, axis=-1) == sum(
         lengths
     ), "Lengths must be summed to num columns"
-    length_indices = jnp.cumsum(jnp.asarray((0,) + lengths))
-    results = []
-    for start, end in zip(length_indices[:-1], length_indices[1:]):
-        results += [matrix[:, start:end]]
-    return results
+    length_indices = jnp.cumsum(jnp.asarray(lengths))[:-1]
+
+    return jnp.split(matrix, length_indices, axis=-1)
 
 
 @ControllerInterface.register
 class NTMControllerTemplate(nn.Module):
     """An NTM Read/Write Controller."""
 
-    memory: MemoryInterface
+    N_dim_memory: int
+    M_dim_memory: int
 
     def setup(self):
-        # TODO: figure out memory typing
-        """Initilize the read/write controller.
-
-        :param memory: The memory object to be addressed by the controller.
         """
-        self.N_dim_memory, self.M_dim_memory = self.memory.size()
-
+        Initilize the read/write controller.
+        """
         # xavier uniform initialization but with a gain of 1.4
         self.weight_initializer = nn.initializers.variance_scaling(
             scale=1.4, mode="fan_avg", distribution="uniform"
@@ -41,15 +37,23 @@ class NTMControllerTemplate(nn.Module):
         self.bias_initializer = nn.initializers.normal(stddev=0.01)
 
     # TODO: give better variable names and add type annotations
-    def _address_memory(self, k, β, g, s, y, w_prev):
+    def _address_memory(self, memory_weights, k, β, g, s, y, w_prev, memory_model):
         # Handle Activations
         k = k.copy()
         β = nn.softplus(β)
         g = nn.sigmoid(g)
-        s = nn.softmax(s, axis=1)
+        s = nn.softmax(s, axis=-1)
         y = 1 + nn.softplus(y)
 
-        w = self.memory.address(k, β, g, s, y, w_prev)
+        w = memory_model.address(
+            memory_weights,
+            k,
+            β,
+            g,
+            s,
+            y,
+            w_prev,
+        )
 
         return w
 
@@ -70,11 +74,17 @@ class NTMReadController(NTMControllerTemplate):
 
     # TODO: figure out type annotations
     @nn.compact
-    def __call__(self, embeddings: jax.Array, w_prev: jax.Array):
+    def __call__(
+        self,
+        embeddings: jax.Array,
+        w_prev: jax.Array,
+        memory_weights: jax.Array,
+        memory_model: MemoryInterface,
+    ):
         """NTMReadController forward function.
 
-        :param embeddings: input representation of the controller.
-        :param w_prev: previous step state
+        :param embeddings: input representation of the model.
+        :param w_prev: [1xm] previous step state
         """
         memory_addresses = nn.Dense(
             sum(self.read_lengths),
@@ -84,8 +94,14 @@ class NTMReadController(NTMControllerTemplate):
         k, β, g, s, y = _split_cols(memory_addresses, self.read_lengths)
 
         # Read from memory
-        memory_locations = self._address_memory(k, β, g, s, y, w_prev)
-        memory_data = self.memory.read(memory_locations)
+        memory_locations = self._address_memory(
+            memory_weights, k, β, g, s, y, w_prev, memory_model
+        )
+
+        memory_data = memory_model.read(
+            memory_weights,
+            memory_locations,
+        )
 
         return memory_data, memory_locations
 
@@ -112,29 +128,43 @@ class NTMWriteController(NTMControllerTemplate):
 
     # TODO: figure out type annotations
     @nn.compact
-    def __call__(self, embeddings: jax.Array, w_prev: jax.Array):
+    def __call__(
+        self,
+        embeddings: jax.Array,
+        w_prev: jax.Array,
+        memory_weights: jax.Array,
+        memory_model: MemoryInterface,
+    ):
         """NTMWriteController forward function.
 
         :param embeddings: input representation of the model.
-        :param w_prev: previous step state
+        :param w_prev: [1xm] previous step state
         """
-        memory_addresses = nn.Dense(
+        memory_components = nn.Dense(
             sum(self.write_lengths),
             kernel_init=self.weight_initializer,
             bias_init=self.bias_initializer,
         )(embeddings)
-        k, β, g, s, y, e, a = _split_cols(memory_addresses, self.write_lengths)
+        k, β, g, s, y, erase, add_weight = _split_cols(
+            memory_components, self.write_lengths
+        )
 
-        # TODO: what is e?
         # e should be in [0, 1]
-        e = nn.sigmoid(e)
+        erase_weight = nn.sigmoid(erase)
 
-        # TODO: what is a?
         # Write to memory
-        memory_addresses = self._address_memory(k, β, g, s, y, w_prev)
-        self.memory.write(memory_addresses, e, a)
+        memory_addresses = self._address_memory(
+            memory_weights, k, β, g, s, y, w_prev, memory_model
+        )
 
-        return memory_addresses
+        memory_weights = memory_model.write(
+            memory_weights,
+            memory_addresses,
+            erase_weight,
+            add_weight,
+        )
+
+        return memory_weights, memory_addresses
 
 
 # TODO: add test cases
@@ -145,19 +175,29 @@ if __name__ == "__main__":
     test_n = 8
     test_m = 9
     test_model_feature_size = 10
-    memory_model = Memory(test_n, test_m)
-    read_controller = NTMReadController(memory_model)
-    write_controller = NTMWriteController(memory_model)
+
+    memory_weights = jnp.zeros((1, test_n, test_m))
+    memory_model = Memory()
+    read_controller = NTMReadController(test_n, test_m)
+    write_controller = NTMWriteController(test_n, test_m)
 
     rng_key = jax.random.key(globals.JAX.RANDOM_SEED)
     key1, key2 = jax.random.split(rng_key)
 
     read_controller_variables = read_controller.init(
-        key1, jnp.ones((1, test_model_feature_size)), jnp.ones((1, test_n))
+        key1,
+        jnp.ones((1, test_model_feature_size)),
+        jnp.ones((1, test_n)),
+        memory_weights,
+        memory_model,
     )
     print("Initialized read controller")
     write_controller_variables = write_controller.init(
-        key2, jnp.ones((1, test_model_feature_size)), jnp.ones((1, test_n))
+        key2,
+        jnp.ones((1, test_model_feature_size)),
+        jnp.ones((1, test_n)),
+        memory_weights,
+        memory_model,
     )
     print("Initialized write controller")
 
