@@ -57,11 +57,11 @@ def train_step(
         loss = jnp.mean(
             optax.losses.squared_error(predictions=predictions, targets=batch)
         )
-        if loss < 0.01:
-            # print(f'{memory_weights=}')
-            # print(f'{written_memory_weights=}')
-            print(f"{write_memory_addresses=}")
-            print(f"{read_memory_addresses=}")
+        # if loss < 0.01:
+        #     # print(f'{memory_weights=}')
+        #     # print(f'{written_memory_weights=}')
+        #     print(f"{write_memory_addresses=}")
+        #     print(f"{read_memory_addresses=}")
         return loss
 
     gradient_fn = jax.value_and_grad(loss_fn, argnums=(0, 1, 2))
