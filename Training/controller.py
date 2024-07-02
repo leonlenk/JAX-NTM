@@ -12,7 +12,6 @@ from Memories.NTM_graves2014 import Memory
 
 def init_train_state(
     model,
-    memory_weights: jax.Array,
     memory_model: MemoryInterface,
     random_key: jax.Array,
     shape: tuple[int, ...],
@@ -20,7 +19,11 @@ def init_train_state(
     learning_rate: float,
 ) -> train_state.TrainState:
     variables = model.init(
-        random_key, jnp.ones(batch_shape), jnp.ones(shape), memory_weights, memory_model
+        random_key,
+        jnp.ones(batch_shape),
+        jnp.ones(shape),
+        memory_model.weights,
+        memory_model,
     )
     optimizer = optax.adam(learning_rate)
     # print(f'{variables[globals.JAX.PARAMS]=}')
@@ -32,7 +35,6 @@ def init_train_state(
 def train_step(
     read_state: train_state.TrainState,
     write_state: train_state.TrainState,
-    memory_weights: jax.Array,
     memory_model: MemoryInterface,
     batch: jnp.ndarray,
     previous_state: jax.Array,
@@ -66,19 +68,16 @@ def train_step(
 
     gradient_fn = jax.value_and_grad(loss_fn, argnums=(0, 1, 2))
     loss, (read_grads, write_grads, memory_grads) = gradient_fn(
-        read_state.params, write_state.params, memory_weights
+        read_state.params, write_state.params, memory_model.weights
     )
 
-    # TODO apply gradients to memory to update bias?
-    # memory_state = memory_state.apply_gradients(grads=memory_grads)
+    memory_model.apply_gradients(memory_grads)
     read_state = read_state.apply_gradients(grads=read_grads)
     write_state = write_state.apply_gradients(grads=write_grads)
-    return read_state, write_state, memory_weights, loss
+    return read_state, write_state, memory_model, loss
 
 
-def train_and_eval(
-    read_state, write_state, memory_weights, memory_model, epochs, shape, batch_shape
-):
+def train_and_eval(read_state, write_state, memory_model, epochs, shape, batch_shape):
     previous_state = jnp.ones(shape)
     pbar = tqdm(range(1, epochs + 1))
     # TODO update training to get random.uniform batches to converge?
@@ -90,12 +89,12 @@ def train_and_eval(
         batch_key, data_key = jax.random.split(data_key)
         batch = jax.random.uniform(batch_key, batch_shape, minval=0.5, maxval=1)
         # batch = jnp.ones(batch_shape)
-        read_state, write_state, memory_weights, loss = train_step(
-            read_state, write_state, memory_weights, memory_model, batch, previous_state
+        read_state, write_state, memory_model, loss = train_step(
+            read_state, write_state, memory_model, batch, previous_state
         )
         pbar.set_postfix(loss=f"{loss:.2f}")
 
-    return read_state, write_state, memory_weights
+    return read_state, write_state, memory_model
 
 
 if __name__ == "__main__":
@@ -110,7 +109,7 @@ if __name__ == "__main__":
     batch_shape = (1, test_m)
     num_epochs = 500
 
-    memory_model = Memory()
+    memory_model = Memory((1, test_n, test_m), optax.adam(learning_rate))
     read_controller = NTMReadController(test_n, test_m)
     write_controller = NTMWriteController(test_n, test_m)
 
@@ -118,18 +117,9 @@ if __name__ == "__main__":
     key1, key2, key3, key4 = jax.random.split(rng_key, num=4)
 
     # memory_weights = jnp.zeros((1, test_n, test_m))
-    memory_weights = jax.random.uniform(
-        key4, (1, test_n, test_m), minval=0, maxval=0.01
-    )
-
-    memory_variables = memory_model.init(
-        key3, memory_weights, jnp.ones(shape), method=Memory.read
-    )
-    optimizer = optax.adam(learning_rate)
 
     read_controller_state = init_train_state(
         read_controller,
-        memory_weights,
         memory_model,
         key1,
         shape,
@@ -139,7 +129,6 @@ if __name__ == "__main__":
 
     write_controller_state = init_train_state(
         write_controller,
-        memory_weights,
         memory_model,
         key2,
         shape,
@@ -147,10 +136,9 @@ if __name__ == "__main__":
         learning_rate,
     )
 
-    read_controller_state, write_controller_state, memory_weights = train_and_eval(
+    read_controller_state, write_controller_state, memory_model = train_and_eval(
         read_controller_state,
         write_controller_state,
-        memory_weights,
         memory_model,
         num_epochs,
         shape,
@@ -166,7 +154,6 @@ if __name__ == "__main__":
     train_and_eval(
         read_controller_state,
         write_controller_state,
-        memory_weights,
         memory_model,
         num_epochs,
         shape,

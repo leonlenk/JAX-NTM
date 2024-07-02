@@ -1,3 +1,4 @@
+import jax
 import jax.numpy as jnp
 import optax
 from flax import linen as nn
@@ -12,6 +13,20 @@ class Memory(MemoryInterface):
     N = number of memory locations
     N = size of vector at each memory location
     """
+
+    def __init__(self, memory_shape, optimizer):
+        self.weights = jax.random.uniform(
+            jax.random.key(globals.JAX.RANDOM_SEED), memory_shape, minval=0, maxval=0.01
+        )
+
+        self.optimizer = optimizer
+        self.optimizer_state = self.optimizer.init(self.weights)
+
+    def apply_gradients(self, gradients):
+        updates, self.optimizer_state = self.optimizer.update(
+            gradients, self.optimizer_state
+        )
+        self.weights = optax.apply_updates(self.weights, updates)
 
     def read(self, memory_weights, read_weights):
         """arXiv:1410.5401 section 3.1"""
@@ -95,7 +110,8 @@ if __name__ == "__main__":
 
     test_n = 10
     test_m = 4
-    memory = Memory()
+    learning_rate = 5e-3
+    memory = Memory((1, test_n, test_m), optax.adam(learning_rate))
 
     read_weights = jnp.divide(jnp.ones(test_n), test_n)
 

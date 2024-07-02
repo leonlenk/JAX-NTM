@@ -4,12 +4,25 @@ from pathlib import Path
 import jax.numpy as jnp
 from flax import linen as nn
 from jax import Array
+from optax import GradientTransformation, OptState
 
 from Common import globals
 from Visualization import memory_visualization
 
 
 class MemoryInterface(ABC, nn.Module):
+    @abstractmethod
+    def __init__(
+        self, memory_shape: tuple[int, ...], optimizer: GradientTransformation
+    ):
+        self.optimizer: GradientTransformation
+        self.memomory_weights: Array
+        self.optimizer_state: OptState
+
+    @abstractmethod
+    def apply_gradients(self, gradients) -> None:
+        raise NotImplementedError
+
     @abstractmethod
     def read(self, memory_weights: Array, read_weights: Array) -> Array:
         raise NotImplementedError
