@@ -75,6 +75,9 @@ class MemoryVisualizerWrapper(MemoryInterface):
             save_name if save_name else globals.VISUALIZATION.NAMES.DEFAULT
         )
 
+    def apply_gradients(self, gradients) -> None:
+        return self.wrapped_memory.apply_gradients(gradients)
+
     def read(self, memory_weights, read_weights):
         memory_visualization.plot_memory_state(
             memory_weights.squeeze(0).transpose(),
