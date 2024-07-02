@@ -26,7 +26,7 @@ class Memory(MemoryInterface):
         updates, self.optimizer_state = self.optimizer.update(
             gradients, self.optimizer_state
         )
-        self.weights = optax.apply_updates(self.weights, updates)
+        self.weights = jax.Array(optax.apply_updates(self.weights, updates))
 
     def read(self, memory_weights, read_weights):
         """arXiv:1410.5401 section 3.1"""
@@ -116,12 +116,11 @@ if __name__ == "__main__":
     read_weights = jnp.divide(jnp.ones(test_n), test_n)
 
     rng_key = jax.random.key(globals.JAX.RANDOM_SEED)
-    memory_weights = jax.random.uniform(rng_key, (1, test_n, test_m))
     # print(memory_variables)
 
-    read_output = memory.read(memory_weights, read_weights)
+    read_output = memory.read(memory.weights, read_weights)
     # print(f'read output: {read_output}')
-    expected_read = jnp.average(memory_weights, axis=1).squeeze(0)
+    expected_read = jnp.average(memory.weights, axis=1).squeeze(0)
     assert (
         jnp.sum(jnp.abs(jnp.subtract(read_output, expected_read))) < test_m * 1e-5
     ), "Memory read function did not return expected vector"
@@ -131,7 +130,7 @@ if __name__ == "__main__":
     erase_vector = jnp.expand_dims(jnp.multiply(jnp.ones(test_m), test_n), axis=0)
     add_vector = jnp.expand_dims(jnp.multiply(jnp.ones(test_m), test_n), axis=0)
     write_output = memory.write(
-        memory_weights,
+        memory.weights,
         write_weights,
         erase_vector,
         add_vector,
@@ -155,7 +154,9 @@ if __name__ == "__main__":
         )
         return -jnp.sum(jnp.log(likelihoods))
 
-    mem_grad, read_grad = jax.grad(loss, (0, 1))(memory_weights, read_weights)
+    mem_grad, read_grad = jax.grad(loss, (0, 1))(memory.weights, read_weights)
     # print(f'{mem_grad=}')
     # print(f'{read_grad=}')
     print("Jax Grad on memory write is not erroring")
+
+    print("passed all tests")

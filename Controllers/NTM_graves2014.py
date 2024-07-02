@@ -169,15 +169,17 @@ class NTMWriteController(NTMControllerTemplate):
 
 # TODO: add test cases
 if __name__ == "__main__":
+    import optax
+
     from Common import globals
     from Memories.NTM_graves2014 import Memory
 
     test_n = 8
     test_m = 9
     test_model_feature_size = 10
+    learning_rate = 5e-3
 
-    memory_weights = jnp.zeros((1, test_n, test_m))
-    memory_model = Memory()
+    memory_model = Memory((1, test_n, test_m), optax.adam(learning_rate))
     read_controller = NTMReadController(test_n, test_m)
     write_controller = NTMWriteController(test_n, test_m)
 
@@ -188,7 +190,7 @@ if __name__ == "__main__":
         key1,
         jnp.ones((1, test_model_feature_size)),
         jnp.ones((1, test_n)),
-        memory_weights,
+        memory_model.weights,
         memory_model,
     )
     print("Initialized read controller")
@@ -196,10 +198,12 @@ if __name__ == "__main__":
         key2,
         jnp.ones((1, test_model_feature_size)),
         jnp.ones((1, test_n)),
-        memory_weights,
+        memory_model.weights,
         memory_model,
     )
     print("Initialized write controller")
 
     assert read_controller.is_read_controller()
     assert not write_controller.is_read_controller()
+
+    print("passed all tests")

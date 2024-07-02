@@ -16,7 +16,7 @@ class MemoryInterface(ABC, nn.Module):
         self, memory_shape: tuple[int, ...], optimizer: GradientTransformation
     ):
         self.optimizer: GradientTransformation
-        self.memomory_weights: Array
+        self.weights: Array
         self.optimizer_state: OptState
 
     @abstractmethod
