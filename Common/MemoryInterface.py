@@ -70,6 +70,7 @@ class MemoryVisualizerWrapper(MemoryInterface):
         save_name: str | None = None,
     ):
         self.wrapped_memory = wrapped_memory
+        self.weights = self.wrapped_memory.weights
         self.save_dir: str = save_dir if save_dir else ""
         self.save_name: str = (
             save_name if save_name else globals.VISUALIZATION.NAMES.DEFAULT

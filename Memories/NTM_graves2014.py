@@ -26,7 +26,7 @@ class Memory(MemoryInterface):
         updates, self.optimizer_state = self.optimizer.update(
             gradients, self.optimizer_state
         )
-        self.weights = jax.Array(optax.apply_updates(self.weights, updates))
+        self.weights = jnp.asarray(optax.apply_updates(self.weights, updates))
 
     def read(self, memory_weights, read_weights):
         """arXiv:1410.5401 section 3.1"""
