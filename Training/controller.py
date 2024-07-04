@@ -59,6 +59,7 @@ def train_step(
         loss = jnp.mean(
             optax.losses.squared_error(predictions=predictions, targets=batch)
         )
+
         # if loss < 0.01:
         #     # print(f'{memory_weights=}')
         #     # print(f'{written_memory_weights=}')
@@ -87,7 +88,7 @@ def train_and_eval(read_state, write_state, memory_model, epochs, shape, batch_s
 
         # TODO update training to get random.uniform batches to converge?
         batch_key, data_key = jax.random.split(data_key)
-        batch = jax.random.uniform(batch_key, batch_shape, minval=0.5, maxval=1)
+        batch = jax.random.uniform(batch_key, batch_shape)  # , minval=0.5, maxval=1)
         # batch = jnp.ones(batch_shape)
         read_state, write_state, memory_model, loss = train_step(
             read_state, write_state, memory_model, batch, previous_state
@@ -101,13 +102,13 @@ if __name__ == "__main__":
     from Common.MemoryInterface import MemoryVisualizerWrapper
 
     test_n = 8
-    test_m = 3
+    test_m = 12
     test_model_feature_size = 10
     learning_rate = 5e-3
     # batch_size = 8
     shape = (1, test_n)
     batch_shape = (1, test_m)
-    num_epochs = 500
+    num_epochs = 1000
 
     memory_model = Memory((1, test_n, test_m), optax.adam(learning_rate))
     read_controller = NTMReadController(test_n, test_m)

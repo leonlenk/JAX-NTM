@@ -16,7 +16,8 @@ class Memory(MemoryInterface):
 
     def __init__(self, memory_shape, optimizer):
         self.weights = jax.random.uniform(
-            jax.random.key(globals.JAX.RANDOM_SEED), memory_shape, minval=0, maxval=0.01
+            jax.random.key(globals.JAX.RANDOM_SEED),
+            memory_shape,  # , minval=0, maxval=0.01
         )
 
         self.optimizer = optimizer

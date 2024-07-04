@@ -95,6 +95,7 @@ class MemoryVisualizerWrapper(MemoryInterface):
             memory_weights.squeeze(0).transpose(),
             read_weights.squeeze(0),
             save_location=self.get_save_path(globals.VISUALIZATION.NAMES.READ),
+            annotation="Read Attention",
         )
 
         read_output = self.wrapped_memory.read(memory_weights, read_weights)
@@ -105,10 +106,18 @@ class MemoryVisualizerWrapper(MemoryInterface):
             memory_weights.squeeze(0).transpose(),
             write_weights.squeeze(0),
             save_location=self.get_save_path(globals.VISUALIZATION.NAMES.WRITE),
+            annotation="Write Attention",
         )
 
         write_output = self.wrapped_memory.write(
             memory_weights, write_weights, erase_vector, add_vector
+        )
+
+        memory_visualization.plot_memory_state_comparison(
+            memory_weights.squeeze(0).transpose(),
+            write_output.squeeze(0).transpose(),
+            save_location=self.get_save_path(globals.VISUALIZATION.NAMES.WRITE),
+            annotation=["before write", "after write"],
         )
 
         return write_output
