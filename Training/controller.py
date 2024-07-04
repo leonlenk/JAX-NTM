@@ -39,7 +39,7 @@ def train_step(
     batch: jnp.ndarray,
     previous_state: jax.Array,
 ):
-    def loss_fn(read_params, write_params, memory_weights):
+    def predict_fn(read_params, write_params, memory_weights, batch):
         written_memory_weights, write_memory_addresses = write_state.apply_fn(
             {globals.JAX.PARAMS: write_params},
             batch,
@@ -56,6 +56,15 @@ def train_step(
             memory_model,
         )
 
+        return predictions, read_memory_addresses, write_memory_addresses
+
+    batched_predict_fn = jax.vmap(predict_fn, in_axes=(None, None, None, 0))
+
+    def loss_fn(read_params, write_params, memory_weights, batch):
+        predictions, read_memory_addresses, write_memory_addresses = batched_predict_fn(
+            read_params, write_params, memory_weights, batch
+        )
+
         loss = jnp.mean(
             optax.losses.squared_error(predictions=predictions, targets=batch)
         )
@@ -66,7 +75,7 @@ def train_step(
     (
         (loss, (read_addresses, write_addresses)),
         (read_grads, write_grads, memory_grads),
-    ) = gradient_fn(read_state.params, write_state.params, memory_model.weights)
+    ) = gradient_fn(read_state.params, write_state.params, memory_model.weights, batch)
 
     # print(read_addresses)
     # print(write_addresses)
@@ -80,21 +89,51 @@ def train_step(
 def train_and_eval(read_state, write_state, memory_model, epochs, shape, batch_shape):
     previous_state = jnp.ones(shape)
     pbar = tqdm(range(1, epochs + 1))
-    # TODO update training to get random.uniform batches to converge?
+
     data_key = jax.random.key(globals.JAX.RANDOM_SEED)
     for epoch in pbar:
         pbar.set_description(f"Epoch {epoch}:")
 
-        # TODO update training to get random.uniform batches to converge?
         batch_key, data_key = jax.random.split(data_key)
-        batch = jax.random.uniform(batch_key, batch_shape)  # , minval=0.5, maxval=1)
-        # batch = jnp.ones(batch_shape)
+        batch = jax.random.uniform(batch_key, batch_shape)
+
         read_state, write_state, memory_model, loss = train_step(
             read_state, write_state, memory_model, batch, previous_state
         )
-        pbar.set_postfix(loss=f"{loss:.2f}")
+        pbar.set_postfix(loss=f"{loss:.3f}")
 
     return read_state, write_state, memory_model
+
+
+def test_batch(
+    read_state: train_state.TrainState,
+    write_state: train_state.TrainState,
+    memory_model: MemoryInterface,
+    batch: jnp.ndarray,
+    previous_state: jax.Array,
+):
+    written_memory_weights, write_memory_addresses = write_state.apply_fn(
+        {globals.JAX.PARAMS: write_state.params},
+        batch,
+        previous_state,
+        memory_model.weights,
+        memory_model,
+    )
+
+    predictions, read_memory_addresses = read_state.apply_fn(
+        {globals.JAX.PARAMS: read_state.params},
+        batch,
+        previous_state,
+        written_memory_weights,
+        memory_model,
+    )
+
+    # print(f'{write_memory_addresses=}')
+    # print(f'{read_memory_addresses=}')
+    # print(f'{batch=}')
+    # print(f'{predictions=}')
+
+    return predictions
 
 
 if __name__ == "__main__":
@@ -104,10 +143,11 @@ if __name__ == "__main__":
     test_m = 12
     test_model_feature_size = 10
     learning_rate = 5e-3
-    # batch_size = 8
+    batch_size = 32
     shape = (1, test_n)
-    batch_shape = (1, test_m)
-    num_epochs = 1000
+    single_input_shape = (1, test_m)
+    batch_shape = (batch_size, 1, test_m)
+    num_epochs = 300
 
     memory_model = Memory((1, test_n, test_m), optax.adam(learning_rate))
     read_controller = NTMReadController(test_n, test_m)
@@ -116,14 +156,12 @@ if __name__ == "__main__":
     rng_key = jax.random.key(globals.JAX.RANDOM_SEED)
     key1, key2, key3, key4 = jax.random.split(rng_key, num=4)
 
-    # memory_weights = jnp.zeros((1, test_n, test_m))
-
     read_controller_state = init_train_state(
         read_controller,
         memory_model,
         key1,
         shape,
-        batch_shape,
+        single_input_shape,
         learning_rate,
     )
 
@@ -132,7 +170,7 @@ if __name__ == "__main__":
         memory_model,
         key2,
         shape,
-        batch_shape,
+        single_input_shape,
         learning_rate,
     )
 
@@ -152,12 +190,14 @@ if __name__ == "__main__":
         memory_model, save_dir="training_test", delete_existing=True
     )
 
-    num_epochs = 2
-    train_and_eval(
-        read_controller_state,
-        write_controller_state,
-        memory_model,
-        num_epochs,
-        shape,
-        batch_shape,
-    )
+    for i in range(2):
+        input_key, rng_key = jax.random.split(rng_key)
+        input = jax.random.uniform(input_key, single_input_shape)
+        previous_state = jnp.ones(shape)
+        preds = test_batch(
+            read_controller_state,
+            write_controller_state,
+            memory_model,
+            input,
+            previous_state,
+        )

@@ -84,7 +84,7 @@ class MemoryVisualizerWrapper(MemoryInterface):
         )
 
         if delete_existing:
-            if self.save_dir.exists:
+            if self.save_dir.is_dir():
                 shutil.rmtree(str(self.save_dir))
 
     def apply_gradients(self, gradients) -> None:
