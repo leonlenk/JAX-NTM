@@ -14,9 +14,16 @@ class Memory(MemoryInterface):
     N = size of vector at each memory location
     """
 
-    def __init__(self, memory_shape, optimizer):
+    def __init__(
+        self,
+        rng_key,
+        memory_shape,
+        optimizer,
+    ):
+        self.rng_key = rng_key
+
         self.weights = jax.random.uniform(
-            jax.random.key(globals.JAX.RANDOM_SEED),
+            self.rng_key,
             memory_shape,  # , minval=0, maxval=0.01
         )
 
@@ -113,7 +120,11 @@ if __name__ == "__main__":
     test_n = 10
     test_m = 4
     learning_rate = 5e-3
-    memory = Memory((1, test_n, test_m), optax.adam(learning_rate))
+    memory = Memory(
+        jax.random.key(globals.JAX.RANDOM_SEED),
+        (1, test_n, test_m),
+        optax.adam(learning_rate),
+    )
 
     read_weights = jnp.divide(jnp.ones(test_n), test_n)
 

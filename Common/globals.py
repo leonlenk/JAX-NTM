@@ -17,6 +17,10 @@ class MACHINES:
         LSTM_LAYER_STATE = "lstm_layer_state_"
         READ_CONTROLLER_BIAS = "read_controller_bias_"
 
+        class MEMORY:
+            N = "num_memory_locations"
+            M = "memory_depth"
+
     class YANG2014:
         NAME = "LANTM yang 2014"
 
@@ -42,6 +46,15 @@ class CONFIG:
     OPTIMIZER = "optimizer"
     OPTIMIZER_ADAM = "adam"
     VAL_PERIOD = "validation_period_in_epochs"
+
+
+class MODELS:
+    MEMORY = "memory_model"
+    READ_CONTROLLER = "read_controller"
+    WRITE_CONTROLLER = "write_controller"
+    MACHINE = "machine"
+    BASE = "base_model"
+    OPTIMIZER = "optimizer"
 
 
 # Curriculum

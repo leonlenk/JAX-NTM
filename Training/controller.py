@@ -149,12 +149,12 @@ if __name__ == "__main__":
     batch_shape = (batch_size, 1, test_m)
     num_epochs = 300
 
-    memory_model = Memory((1, test_n, test_m), optax.adam(learning_rate))
-    read_controller = NTMReadController(test_n, test_m)
-    write_controller = NTMWriteController(test_n, test_m)
-
     rng_key = jax.random.key(globals.JAX.RANDOM_SEED)
     key1, key2, key3, key4 = jax.random.split(rng_key, num=4)
+
+    memory_model = Memory(key3, (1, test_n, test_m), optax.adam(learning_rate))
+    read_controller = NTMReadController(test_n, test_m)
+    write_controller = NTMWriteController(test_n, test_m)
 
     read_controller_state = init_train_state(
         read_controller,

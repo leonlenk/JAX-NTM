@@ -14,8 +14,12 @@ from Visualization import memory_visualization
 class MemoryInterface(ABC, nn.Module):
     @abstractmethod
     def __init__(
-        self, memory_shape: tuple[int, ...], optimizer: GradientTransformation
+        self,
+        rng_key: Array,
+        memory_shape: tuple[int, ...],
+        optimizer: GradientTransformation,
     ):
+        self.rng_key: Array
         self.optimizer: GradientTransformation
         self.weights: Array
         self.optimizer_state: OptState

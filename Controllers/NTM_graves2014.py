@@ -2,6 +2,7 @@ from typing import List, Tuple
 
 import jax
 import jax.numpy as jnp
+import optax
 from flax import linen as nn
 
 from Common import globals
@@ -164,9 +165,6 @@ class NTMWriteController(NTMControllerTemplate):
 
 # TODO: add test cases
 if __name__ == "__main__":
-    import optax
-
-    from Common import globals
     from Memories.NTM_graves2014 import Memory
 
     test_n = 8
@@ -174,7 +172,11 @@ if __name__ == "__main__":
     test_model_feature_size = 10
     learning_rate = 5e-3
 
-    memory_model = Memory((1, test_n, test_m), optax.adam(learning_rate))
+    memory_model = Memory(
+        jax.random.key(globals.JAX.RANDOM_SEED),
+        (1, test_n, test_m),
+        optax.adam(learning_rate),
+    )
     read_controller = NTMReadController(test_n, test_m)
     write_controller = NTMWriteController(test_n, test_m)
 
