@@ -11,9 +11,9 @@ from Common.MemoryInterface import MemoryInterface
 
 def _split_cols(matrix: jax.Array, lengths: Tuple) -> List[jax.Array]:
     """Split a 2D matrix to variable length columns."""
-    assert jnp.size(matrix, axis=-1) == sum(
-        lengths
-    ), "Lengths must be summed to num columns"
+    # assert jnp.size(matrix, axis=-1) == sum(
+    # lengths
+    # ), "Lengths must be summed to num columns"
     length_indices = jnp.cumsum(jnp.asarray(lengths))[:-1]
 
     return jnp.split(matrix, length_indices, axis=-1)
@@ -65,6 +65,7 @@ class NTMReadController(NTMControllerTemplate):
         # Corresponding to k, β, g, s, γ sizes from the paper
         self.read_lengths = (self.M_dim_memory, 1, 1, 3, 1)
 
+    @jax.jit
     def is_read_controller(self) -> bool:
         return True
 
@@ -116,6 +117,7 @@ class NTMWriteController(NTMControllerTemplate):
             self.M_dim_memory,
         )
 
+    @jax.jit
     def is_read_controller(self) -> bool:
         return False
 

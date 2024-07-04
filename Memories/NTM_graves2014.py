@@ -98,6 +98,7 @@ class Memory(MemoryInterface):
         return w
 
 
+@jax.jit
 def circular_convolution_1d(array, kernel):
     assert kernel.shape[0] % 2 == 1
     pad_length = kernel.shape[0] // 2
