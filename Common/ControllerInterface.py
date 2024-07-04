@@ -10,10 +10,6 @@ class ControllerInterface(ABC, nn.Module):
         raise NotImplementedError
 
     @abstractmethod
-    def create_new_state(self, batch_size: int) -> Array:
-        raise NotImplementedError
-
-    @abstractmethod
     def register_parameters(self) -> Array:
         raise NotImplementedError
 

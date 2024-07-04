@@ -65,10 +65,6 @@ class NTMReadController(NTMControllerTemplate):
         # Corresponding to k, β, g, s, γ sizes from the paper
         self.read_lengths = (self.M_dim_memory, 1, 1, 3, 1)
 
-    def create_new_state(self, batch_size: int) -> jax.Array:
-        # The state holds the previous time step address weightings
-        return jnp.zeros((batch_size, self.N_dim_memory))
-
     def is_read_controller(self) -> bool:
         return True
 
@@ -119,9 +115,6 @@ class NTMWriteController(NTMControllerTemplate):
             self.M_dim_memory,
             self.M_dim_memory,
         )
-
-    def create_new_state(self, batch_size: int) -> jax.Array:
-        return jnp.zeros((batch_size, self.N_dim_memory))
 
     def is_read_controller(self) -> bool:
         return False
