@@ -9,11 +9,17 @@ from Common import globals
 # memory block display size
 pixel_scale = 128
 # padding on edges of image (left, right, top, bottom)
-padding_edges = [pixel_scale // 8, pixel_scale // 8, pixel_scale // 2, pixel_scale // 8]
+padding_edges = [pixel_scale // 8, pixel_scale // 8, pixel_scale // 8, pixel_scale // 8]
 # padding between memory blocks
 padding_interior = pixel_scale // 8
+# color definitions (grayscale)
+color_background = 255
+color_foreground = 0
 
-draw_font = ImageFont.load_default(size=pixel_scale // 4)
+font_size = pixel_scale // 4
+draw_font = ImageFont.load_default(size=font_size)
+font_size_small = pixel_scale // 6
+draw_font_small = ImageFont.load_default(size=font_size_small)
 
 
 def plot_memory_state_comparison(
@@ -33,13 +39,13 @@ def plot_memory_state_comparison(
 
     if transpose:
         img = Image.new(
-            "RGB", (memory_img_1.width, memory_img_1.height + memory_img_2.height)
+            "L", (memory_img_1.width, memory_img_1.height + memory_img_2.height)
         )
         img.paste(memory_img_1, (0, 0))
         img.paste(memory_img_2, (0, memory_img_1.height))
     else:
         img = Image.new(
-            "RGB", (memory_img_1.width + memory_img_2.width, memory_img_1.height)
+            "L", (memory_img_1.width + memory_img_2.width, memory_img_1.height)
         )
         img.paste(memory_img_1, (0, 0))
         img.paste(memory_img_2, (memory_img_1.width, 0))
@@ -97,33 +103,64 @@ def plot_memory_states_gif(
 def plot_fuzzy_attention(
     img: Image.Image,
     attention: Array,
-    attention_color: tuple[int, int, int] = (0, 255, 0),
 ) -> Image.Image:
     assert (
         len(attention.shape) == 1
     ), "Memory state visualization assumes a 1-dimensional attention"
 
     def color_from_value(value: float):
-        min_value = 0
-        max_value = 128
-        value_color = int(min_value + value * (max_value - min_value))
-        return attention_color + (value_color,)
+        # clip to (0,1)
+        value = min(max(value, 0), 1)
+        # negative interpolation
+        min_value = 224
+        max_value = 32
+        value_color = int(min_value - (value * (min_value - max_value)))
+        return value_color
 
     # make sure the attention is normalized
     attention = jnp.divide(attention, jnp.sum(attention))
 
-    draw = ImageDraw.ImageDraw(img, "RGBA")
+    # create new image with an extra row of blocks and extra X padding for labeling annotation vs memory
+    img2 = Image.new(
+        "L",
+        (img.width + pixel_scale, img.height + pixel_scale + padding_interior),
+        color_background,
+    )
+    img2.paste(img, (pixel_scale, pixel_scale + padding_interior))
 
+    draw = ImageDraw.ImageDraw(img2)
+
+    # draw the attention blocks
     for i in range(attention.shape[0]):
         val = float(attention[i].item())
-        x0 = padding_edges[0] + i * (pixel_scale + padding_interior)
+        x0 = padding_edges[0] + i * (pixel_scale + padding_interior) + pixel_scale
         y0 = padding_edges[2]
         draw.rectangle(
-            [x0, y0, x0 + pixel_scale, img.size[1] - padding_edges[3]],
-            fill=color_from_value(val),
+            [x0, y0, x0 + pixel_scale, y0 + pixel_scale], fill=color_from_value(val)
         )
 
-    return img
+    # notate which blocks are attention and which are memory
+    draw.text(
+        (padding_edges[0], padding_edges[2] + pixel_scale // 2 - font_size_small // 2),
+        "Attention: ",
+        font=draw_font_small,
+        fill=color_foreground,
+    )
+    draw.text(
+        (
+            padding_edges[0],
+            padding_edges[2]
+            + pixel_scale
+            + padding_interior
+            + pixel_scale // 2
+            - font_size_small // 2,
+        ),
+        "Memory: ",
+        font=draw_font_small,
+        fill=color_foreground,
+    )
+
+    return img2
 
 
 def plot_memory_state(
@@ -140,10 +177,6 @@ def plot_memory_state(
     if transpose:
         memory = memory.transpose()
 
-    # color definitions (grayscale)
-    color_background = (255, 255, 255)
-    color_foreground = (0, 0, 0)
-
     def color_from_value(value: float):
         # clip to (0,1)
         value = min(max(value, 0), 1)
@@ -151,7 +184,7 @@ def plot_memory_state(
         min_value = 224
         max_value = 32
         value_color = int(min_value - (value * (min_value - max_value)))
-        return (value_color, value_color, value_color)
+        return value_color
 
     N, M = memory.shape
     width = (
@@ -167,7 +200,7 @@ def plot_memory_state(
         + (M - 1) * padding_interior
     )
 
-    img = Image.new("RGB", (width, height))
+    img = Image.new("L", (width, height))
 
     draw = ImageDraw.ImageDraw(img)
 
@@ -182,17 +215,23 @@ def plot_memory_state(
             draw.rectangle(
                 [x0, y0, x0 + pixel_scale, y0 + pixel_scale], fill=color_from_value(val)
             )
+    if attention is not None:
+        img = plot_fuzzy_attention(img, attention)
 
     if annotation is not None:
+        # make a bigger image for the annotation
+        img2 = Image.new("L", (img.width, img.height + font_size * 2), color_background)
+        img2.paste(img, (0, font_size * 2))
+        img = img2
+
+        draw = ImageDraw.ImageDraw(img)
+
         draw.text(
-            (padding_edges[0], padding_edges[1]),
+            (padding_edges[0], font_size // 2),
             annotation,
             font=draw_font,
             fill=color_foreground,
         )
-
-    if attention is not None:
-        img = plot_fuzzy_attention(img, attention)
 
     if save_location:
         img.save(get_save_path(save_location, globals.VISUALIZATION.IMG_EXTENSION))

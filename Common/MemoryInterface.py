@@ -1,3 +1,4 @@
+import shutil
 from abc import ABC, abstractmethod
 from pathlib import Path
 
@@ -68,13 +69,23 @@ class MemoryVisualizerWrapper(MemoryInterface):
         wrapped_memory: MemoryInterface,
         save_dir: str | None = None,
         save_name: str | None = None,
+        delete_existing: bool = False,
     ):
         self.wrapped_memory = wrapped_memory
         self.weights = self.wrapped_memory.weights
-        self.save_dir: str = save_dir if save_dir else ""
+        self.save_dir: Path = Path(save_dir) if save_dir else Path("")
+
+        if not self.save_dir.is_absolute():
+            self.save_dir = Path(globals.VISUALIZATION.OUTPUT_DIR) / self.save_dir
+            self.save_dir = self.save_dir.resolve()
+
         self.save_name: str = (
             save_name if save_name else globals.VISUALIZATION.NAMES.DEFAULT
         )
+
+        if delete_existing:
+            if self.save_dir.exists:
+                shutil.rmtree(str(self.save_dir))
 
     def apply_gradients(self, gradients) -> None:
         return self.wrapped_memory.apply_gradients(gradients)
@@ -132,15 +143,12 @@ class MemoryVisualizerWrapper(MemoryInterface):
 
     def get_save_path(self, vis_type: str, leading_zeros=2):
         counter = 0
-        base_path = str(Path(self.save_dir) / f"{self.save_name}_{vis_type}")
+        base_path = str(self.save_dir / f"{self.save_name}_{vis_type}")
 
         max_counter = 10**leading_zeros
         while counter < max_counter:
-            test_path = f"{base_path}_{str(counter).zfill(leading_zeros)}"
-            test_path_real = memory_visualization.get_save_path(
-                test_path, globals.VISUALIZATION.IMG_EXTENSION
-            )
-            if not Path.is_file(Path(test_path_real)):
+            test_path = f"{base_path}_{str(counter).zfill(leading_zeros)}{globals.VISUALIZATION.IMG_EXTENSION}"
+            if not Path.is_file(Path(test_path)):
                 break
             counter += 1
 

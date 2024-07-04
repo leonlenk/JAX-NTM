@@ -148,7 +148,9 @@ if __name__ == "__main__":
     # test out the memory visualization wrapper with a smaller number of epochs
     # outputs to Visualization_Outputs/training_test/
 
-    memory_model = MemoryVisualizerWrapper(memory_model, "training_test")
+    memory_model = MemoryVisualizerWrapper(
+        memory_model, save_dir="training_test", delete_existing=True
+    )
 
     num_epochs = 2
     train_and_eval(
