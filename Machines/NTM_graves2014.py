@@ -2,10 +2,10 @@ import jax.numpy as jnp
 from flax import linen as nn
 from jax import Array
 
+from Backbone.NTM_graves2014 import LSTMModel
 from Common import globals
 from Controllers.NTM_graves2014 import NTMReadController, NTMWriteController
 from Memories.NTM_graves2014 import Memory
-from Models.NTM_graves2014 import LSTMModel
 
 
 class NTM(nn.Module):
