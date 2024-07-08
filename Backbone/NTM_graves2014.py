@@ -1,59 +1,127 @@
 import jax
+import jax.numpy as jnp
 from flax import linen as nn
 from jax import Array
 
 from Common import globals
+from Common.ControllerInterface import ControllerInterface
+from Common.MemoryInterface import MemoryInterface
+
+
+class PreviousState:
+    def __init__(self, memory_weights, read_previous, write_previous):
+        self.memory_weights = memory_weights
+        self.read_previous = read_previous
+        self.write_previous = write_previous
 
 
 class LSTMModel(nn.Module):
     """Basic stacked LSTM for controlling an NTM"""
 
+    prng_key: Array
     features: int
     layers: int
-    seed: int = globals.JAX.RANDOM_SEED
+    num_outputs: int
+    read_head: ControllerInterface
+    write_head: ControllerInterface
+
+    def setup(self):
+        # add a dense layer for the ultimate output
+        self.kernel_init = nn.initializers.xavier_uniform()
+        self.bias_init = nn.initializers.normal()
 
     @nn.compact
-    def __call__(self, input: Array, states=None) -> tuple[Array, list[Array]]:
-        lstm_layer = nn.scan(
-            nn.OptimizedLSTMCell,
-            variable_broadcast=globals.JAX.PARAMS,
-            split_rngs={globals.JAX.PARAMS: False},
-            in_axes=1,
-            out_axes=1,
+    def __call__(
+        self, input: Array, memory_model: MemoryInterface, previous_state: PreviousState
+    ) -> tuple[Array, Array, PreviousState]:
+        lstm_layers = [nn.OptimizedLSTMCell(self.features) for _ in range(self.layers)]
+        hidden = lstm_layers[0].initialize_carry(self.prng_key, input.shape)
+
+        for i in range(self.layers):
+            hidden, input = lstm_layers[i](hidden, input)
+
+        read_data, read_locations = self.read_head(
+            input,
+            previous_state.read_previous,
+            previous_state.memory_weights,
+            memory_model,
+        )
+        memory_weights, write_locations = self.write_head(
+            input,
+            previous_state.write_previous,
+            previous_state.memory_weights,
+            memory_model,
         )
 
-        new_states = []
-        for i in range(self.layers):
-            lstm = lstm_layer(self.features)
-            if states is None:
-                state = self.param(
-                    f"{globals.MACHINES.GRAVES2014.LSTM_LAYER_STATE}{i}",
-                    lstm.initialize_carry,
-                    input[:, 0].shape,
-                )
-            else:
-                state = states[i]
+        dense_input = jnp.concatenate([input, read_data], axis=-1)
+        output = nn.sigmoid(
+            nn.Dense(
+                self.num_outputs, kernel_init=self.kernel_init, bias_init=self.bias_init
+            )(dense_input)
+        )
 
-            state, input = lstm(state, input)
-            new_states.append(state)
-
-        return input, new_states
+        return (
+            output,
+            read_data,
+            PreviousState(memory_weights, read_locations, write_locations),
+        )
 
 
 # basic test cases
 if __name__ == "__main__":
-    import jax.numpy as jnp
+    import optax
+    from flax.training import train_state
+
+    from Controllers.NTM_graves2014 import NTMReadController, NTMWriteController
+    from Memories.NTM_graves2014 import Memory
 
     layers = 4
-    features = 32
     batch_size = 8
-    input_features = 7
-    input_length = 12
+    input_features = 20
+    input_length = 1
+    memory_n = 8
+    memory_m = 12
+    lr = 1e-3
+    num_recursions = 2
+    num_outputs = input_features - memory_m
 
-    x = jnp.ones((batch_size, input_length, input_features))
-    model = LSTMModel(features=features, layers=layers)
-    params = model.init(jax.random.key(globals.JAX.RANDOM_SEED), x)
-    y, states = model.apply(params, x)
+    key1, key2, key3 = jax.random.split(jax.random.key(globals.JAX.RANDOM_SEED), num=3)
 
-    assert len(params[globals.JAX.PARAMS]) == layers
-    assert y.shape == (batch_size, input_length, features)
+    memory_model = Memory(key1, (1, memory_n, memory_m), optax.adam(lr))
+    read_head = NTMReadController(memory_n, memory_m)
+    write_head = NTMWriteController(memory_n, memory_m)
+
+    model = LSTMModel(key3, memory_m, layers, num_outputs, read_head, write_head)
+    init_input = jnp.ones((input_length, input_features))
+    init_previous_state = PreviousState(
+        memory_model.weights, jnp.ones((1, memory_n)), jnp.ones((1, memory_n))
+    )
+    params = model.init(key2, init_input, memory_model, init_previous_state)
+    model_state = train_state.TrainState.create(
+        apply_fn=model.apply,
+        tx=optax.adam(lr),
+        params=params[globals.JAX.PARAMS],
+    )
+
+    def loss_fn(model_params, memory_weights):
+        sample_batch = jnp.ones((input_length, input_features))
+        previous_state = PreviousState(
+            memory_weights, jnp.ones((1, memory_n)), jnp.ones((1, memory_n))
+        )
+        for _ in range(num_recursions):
+            (sample_batch, read_data, previous_state), variables = model_state.apply_fn(
+                {globals.JAX.PARAMS: model_params},
+                sample_batch,
+                memory_model,
+                previous_state,
+                mutable=["state"],
+            )
+            sample_batch = jnp.concat((sample_batch, read_data), axis=1)
+
+        return jnp.sum(sample_batch)
+
+    gradient_fn = jax.grad(loss_fn, argnums=(0, 1))
+    model_grads, mem_grads = gradient_fn(model_state.params, memory_model.weights)
+
+    print(model_grads)
+    print(mem_grads)

@@ -20,8 +20,7 @@ def _split_cols(matrix: jax.Array, lengths: Tuple) -> List[jax.Array]:
     return jnp.split(matrix, length_indices, axis=-1)
 
 
-@ControllerInterface.register
-class NTMControllerTemplate(nn.Module):
+class NTMControllerTemplate(ControllerInterface, nn.Module):
     """An NTM Read/Write Controller."""
 
     N_dim_memory: int
@@ -72,13 +71,7 @@ class NTMReadController(NTMControllerTemplate):
 
     # TODO: figure out type annotations
     @nn.compact
-    def __call__(
-        self,
-        embeddings: jax.Array,
-        w_prev: jax.Array,
-        memory_weights: jax.Array,
-        memory_model: MemoryInterface,
-    ):
+    def __call__(self, embeddings, w_prev, memory_weights, memory_model):
         """NTMReadController forward function.
 
         :param embeddings: input representation of the model.

@@ -156,6 +156,7 @@ def init_models(train_config, model_config):
 
 
 if __name__ == "__main__":
+    from Backbone.NTM_graves2014 import LSTMModel
     from Controllers.NTM_graves2014 import NTMReadController, NTMWriteController
     from Memories.NTM_graves2014 import Memory
 
@@ -171,6 +172,7 @@ if __name__ == "__main__":
         globals.MODELS.MEMORY: Memory,
         globals.MODELS.WRITE_CONTROLLER: NTMWriteController,
         globals.MODELS.READ_CONTROLLER: NTMReadController,
+        globals.MODELS.BASE: LSTMModel,
         globals.MODELS.OPTIMIZER: optax.adam,
     }
 
