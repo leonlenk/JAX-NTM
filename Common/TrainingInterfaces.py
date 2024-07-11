@@ -38,7 +38,7 @@ class DataloaderInterface(ABC):
         self,
         batch_size: int,
         num_batches: int,
-        memory_shape: tuple,
+        memory_depth: int,
         curriculum_scheduler: CurriculumSchedulerInterface,
         seed: int = globals.JAX.RANDOM_SEED,
     ):
@@ -46,12 +46,13 @@ class DataloaderInterface(ABC):
 
         :param batch_size: number of samples per batch
         :param num_batches: number of batches in the dataset
+        :param memory_depth: length of vector at each memory location
         :param curriculum_scheduler: object which informs the dataloader what difficulty samples to prepare
         :param seed: random seed for generating/ordering data
         """
         self.batch_size = batch_size
         self.num_batches = num_batches
-        self.memory_shape = memory_shape
+        self.memory_depth = memory_depth
         self.curriculum_scheduler = curriculum_scheduler
         self.prng = jax.random.key(seed)
         self.iterations = 0

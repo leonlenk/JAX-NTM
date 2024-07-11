@@ -11,10 +11,10 @@ class CopyLoader(DataloaderInterface):
         self.curriculum_scheduler.update_curriculum_level(curriculum_params)
 
     def __next__(self):
-        """Returns an input and a target, both of size (batch_size, memory_depth, max_curriculum_level).
-        Each item in the batch will have an array of random 0s and 1s with size (memory_depth - 1, curriculum_level - 1).
+        """Returns an input and a target, both of size (batch_size, max_curriculum_level, memory_depth).
+        Each item in the batch will have an array of random 0s and 1s with size (curriculum_level - 1, memory_depth - 1).
         Aside from this, all values in the array will be zero for the target.
-        The input is the same as the target except for the inclusion of the delimiter (value 1) at location (memory_depth, curriculum_level).
+        The input is the same as the target except for the inclusion of the delimiter (value 1) at location (curriculum_level, memory_depth).
 
         This is implemented by first creating the full size array and then zeroing out each section.
         """
@@ -29,24 +29,24 @@ class CopyLoader(DataloaderInterface):
         self.prng, subkey = jax.random.split(self.prng)
         data = jax.random.randint(
             subkey,
-            (self.batch_size, self.memory_shape[1], int(jnp.max(curriculum))),
+            (self.batch_size, int(jnp.max(curriculum)), self.memory_depth),
             0,
             2,
         )
 
         # zero out the last memory depth
-        data = data.at[:, -1, :].set(0)
+        data = data.at[:, :, -1].set(0)
 
         # loop through the curriculum levels and zero out the extra data columns (level - 1 columns are used)
         for i, level in enumerate(curriculum):
-            data = data.at[i, :, level - 1 :].set(0)
+            data = data.at[i, level - 1 :, :].set(0)
 
-        # this current state the desired output
+        # this current state is the desired output
         target = data.copy()
 
         # loop through the curriculum levels again and add the delimiter
         for i, level in enumerate(curriculum):
-            data = data.at[i, -1, level - 1].set(1)
+            data = data.at[i, level - 1, -1].set(1)
 
         return data, target
 
@@ -66,11 +66,11 @@ if __name__ == "__main__":
 
     batch_size = 7
     num_batches = 1
-    memory_shape = (5, 6)
+    memory_depth = 6
 
     curric = CurriculumSchedulerZaremba2014(config)
 
-    copy_loader = CopyLoader(batch_size, num_batches, memory_shape, curric)
+    copy_loader = CopyLoader(batch_size, num_batches, memory_depth, curric)
 
     for data, target in copy_loader:
         # print(f'{data=}')
