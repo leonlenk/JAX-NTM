@@ -17,6 +17,44 @@ class CopyLoader(DataloaderInterface):
         The input is the same as the target except for the inclusion of the delimiter (value 1) at location (curriculum_level, memory_depth).
 
         This is implemented by first creating the full size array and then zeroing out each section.
+
+        Example:
+            batch_size = 3
+            memory_depth = 6
+
+            data =      Array([
+                    [                   # first batch
+                    [0, 1, 0, 0, 1, 0],
+                    [1, 1, 0, 1, 0, 0],
+                    [0, 0, 0, 0, 0, 1]  # delimiter
+                    ],
+                    [                   # second batch
+                    [1, 0, 0, 1, 0, 0],
+                    [0, 0, 0, 0, 0, 1], # delimiter
+                    [0, 0, 0, 0, 0, 0]
+                    ],
+                    [                   # third batch
+                    [1, 0, 1, 0, 0, 0],
+                    [1, 0, 1, 1, 0, 0],
+                    [0, 0, 0, 0, 0, 1]  # delimiter
+                    ]], dtype=int32)
+
+            target =    Array([
+                    [
+                    [0, 1, 0, 0, 1, 0],
+                    [1, 1, 0, 1, 0, 0],
+                    [0, 0, 0, 0, 0, 0]
+                    ],
+                    [
+                    [1, 0, 0, 1, 0, 0],
+                    [0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0]
+                    ],
+                    [
+                    [1, 0, 1, 0, 0, 0],
+                    [1, 0, 1, 1, 0, 0],
+                    [0, 0, 0, 0, 0, 0]
+                    ]], dtype=int32)
         """
         if self.iterations >= self.num_batches:
             raise StopIteration
@@ -64,7 +102,7 @@ if __name__ == "__main__":
         CURRICULUM.OPTIONS.ZAREMBA2014.P3: 0.65,
     }
 
-    batch_size = 7
+    batch_size = 5
     num_batches = 1
     memory_depth = 6
 

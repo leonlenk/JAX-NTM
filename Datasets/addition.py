@@ -25,6 +25,48 @@ class BinaryAdditionLoader(DataloaderInterface):
 
         The target will be of length (2 * max_curriculum_level) + 1.
             The sum of the two numbers will be encoded in the same way and right-aligned.
+
+        Example:
+            batch_size = 2
+            memory_depth = 6
+
+            augends =   Array([3, 0], dtype=int32)
+            addends =   Array([0, 1], dtype=int32)
+            sums =      Array([3, 1], dtype=int32)
+
+            data =      Array([
+                    [                           # first batch
+                    [1., 0., 0., 0., 0., 0.],   # 2s place
+                    [1., 0., 0., 0., 0., 0.],   # 1s place
+                    [0., 1., 0., 0., 0., 0.],   # first delimiter -> augend = 3
+                    [0., 0., 0., 0., 0., 0.],
+                    [0., 0., 0., 0., 0., 0.],
+                    [0., 0., 1., 0., 0., 0.]    # second delimiter -> addend = 0
+                    ],
+                    [
+                    [0., 0., 0., 0., 0., 0.],
+                    [0., 0., 0., 0., 0., 0.],
+                    [0., 1., 0., 0., 0., 0.],
+                    [0., 0., 0., 0., 0., 0.],
+                    [1., 0., 0., 0., 0., 0.],
+                    [0., 0., 1., 0., 0., 0.]
+                    ]], dtype=float32)
+
+            target =    Array([
+                    [                           # first batch
+                    [0., 0., 0., 0., 0., 0.],
+                    [0., 0., 0., 0., 0., 0.],
+                    [0., 0., 0., 0., 0., 0.],
+                    [1., 0., 0., 0., 0., 0.],   # 2s place
+                    [1., 0., 0., 0., 0., 0.]    # 1s place
+                    ],                          # sum = 3
+                    [
+                    [0., 0., 0., 0., 0., 0.],
+                    [0., 0., 0., 0., 0., 0.],
+                    [0., 0., 0., 0., 0., 0.],
+                    [0., 0., 0., 0., 0., 0.],
+                    [1., 0., 0., 0., 0., 0.]
+                    ]], dtype=float32)
         """
         if self.iterations >= self.num_batches:
             raise StopIteration
