@@ -11,63 +11,64 @@ from Common.TrainingInterfaces import DataloaderInterface
 
 
 class BinaryAdditionLoader(DataloaderInterface):
+    """Returns an input and a target, both of size (batch_size, memory_depth, 2 * (max_curriculum_level + 1)).
+    The addition problem will be composed of two numbers (the augend and the addend)
+        These are randomly selected from [0,2^curriculum_level)
+    The first element of each memory location will be 1s and 0s representing the number in binary.
+    There will be two extra memory locations as delimiters, one after each number.
+        The first 3 values in their memory locations will be (0,1,0,...) and (0,0,1,...) respectively.
+    Aside from this, all values in the array will be zero.
+
+    The target will be of length (2 * max_curriculum_level) + 1.
+        The sum of the two numbers will be encoded in the same way and right-aligned.
+
+    Example:
+        batch_size = 2
+        memory_depth = 6
+
+        augends =   Array([3, 0], dtype=int32)
+        addends =   Array([0, 1], dtype=int32)
+        sums =      Array([3, 1], dtype=int32)
+
+        data =      Array([
+                [                           # first batch
+                [1., 0., 0., 0., 0., 0.],   # 2s place
+                [1., 0., 0., 0., 0., 0.],   # 1s place
+                [0., 1., 0., 0., 0., 0.],   # first delimiter -> augend = 3
+                [0., 0., 0., 0., 0., 0.],
+                [0., 0., 0., 0., 0., 0.],
+                [0., 0., 1., 0., 0., 0.]    # second delimiter -> addend = 0
+                ],
+                [
+                [0., 0., 0., 0., 0., 0.],
+                [0., 0., 0., 0., 0., 0.],
+                [0., 1., 0., 0., 0., 0.],
+                [0., 0., 0., 0., 0., 0.],
+                [1., 0., 0., 0., 0., 0.],
+                [0., 0., 1., 0., 0., 0.]
+                ]], dtype=float32)
+
+        target =    Array([
+                [                           # first batch
+                [0., 0., 0., 0., 0., 0.],
+                [0., 0., 0., 0., 0., 0.],
+                [0., 0., 0., 0., 0., 0.],
+                [1., 0., 0., 0., 0., 0.],   # 2s place
+                [1., 0., 0., 0., 0., 0.]    # 1s place
+                ],                          # sum = 3
+                [
+                [0., 0., 0., 0., 0., 0.],
+                [0., 0., 0., 0., 0., 0.],
+                [0., 0., 0., 0., 0., 0.],
+                [0., 0., 0., 0., 0., 0.],
+                [1., 0., 0., 0., 0., 0.]
+                ]], dtype=float32)
+    """
+
     def update_curriculum_level(self, curriculum_params: dict):
         self.curriculum_scheduler.update_curriculum_level(curriculum_params)
 
     def __next__(self):
-        """Returns an input and a target, both of size (batch_size, memory_depth, 2 * (max_curriculum_level + 1)).
-        The addition problem will be composed of two numbers (the augend and the addend)
-            These are randomly selected from [0,2^curriculum_level)
-        The first element of each memory location will be 1s and 0s representing the number in binary.
-        There will be two extra memory locations as delimiters, one after each number.
-            The first 3 values in their memory locations will be (0,1,0,...) and (0,0,1,...) respectively.
-        Aside from this, all values in the array will be zero.
-
-        The target will be of length (2 * max_curriculum_level) + 1.
-            The sum of the two numbers will be encoded in the same way and right-aligned.
-
-        Example:
-            batch_size = 2
-            memory_depth = 6
-
-            augends =   Array([3, 0], dtype=int32)
-            addends =   Array([0, 1], dtype=int32)
-            sums =      Array([3, 1], dtype=int32)
-
-            data =      Array([
-                    [                           # first batch
-                    [1., 0., 0., 0., 0., 0.],   # 2s place
-                    [1., 0., 0., 0., 0., 0.],   # 1s place
-                    [0., 1., 0., 0., 0., 0.],   # first delimiter -> augend = 3
-                    [0., 0., 0., 0., 0., 0.],
-                    [0., 0., 0., 0., 0., 0.],
-                    [0., 0., 1., 0., 0., 0.]    # second delimiter -> addend = 0
-                    ],
-                    [
-                    [0., 0., 0., 0., 0., 0.],
-                    [0., 0., 0., 0., 0., 0.],
-                    [0., 1., 0., 0., 0., 0.],
-                    [0., 0., 0., 0., 0., 0.],
-                    [1., 0., 0., 0., 0., 0.],
-                    [0., 0., 1., 0., 0., 0.]
-                    ]], dtype=float32)
-
-            target =    Array([
-                    [                           # first batch
-                    [0., 0., 0., 0., 0., 0.],
-                    [0., 0., 0., 0., 0., 0.],
-                    [0., 0., 0., 0., 0., 0.],
-                    [1., 0., 0., 0., 0., 0.],   # 2s place
-                    [1., 0., 0., 0., 0., 0.]    # 1s place
-                    ],                          # sum = 3
-                    [
-                    [0., 0., 0., 0., 0., 0.],
-                    [0., 0., 0., 0., 0., 0.],
-                    [0., 0., 0., 0., 0., 0.],
-                    [0., 0., 0., 0., 0., 0.],
-                    [1., 0., 0., 0., 0., 0.]
-                    ]], dtype=float32)
-        """
         if self.iterations >= self.num_batches:
             raise StopIteration
         self.iterations += 1

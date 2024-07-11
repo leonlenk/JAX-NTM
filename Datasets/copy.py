@@ -7,55 +7,56 @@ from Common.TrainingInterfaces import DataloaderInterface
 
 
 class CopyLoader(DataloaderInterface):
+    """Returns an input and a target, both of size (batch_size, max_curriculum_level, memory_depth).
+    Each item in the batch will have an array of random 0s and 1s with size (curriculum_level - 1, memory_depth - 1).
+    Aside from this, all values in the array will be zero for the target.
+    The input is the same as the target except for the inclusion of the delimiter (value 1) at location (curriculum_level, memory_depth).
+
+    This is implemented by first creating the full size array and then zeroing out each section.
+
+    Example:
+        batch_size = 3
+        memory_depth = 6
+
+        data =      Array([
+                [                   # first batch
+                [0, 1, 0, 0, 1, 0],
+                [1, 1, 0, 1, 0, 0],
+                [0, 0, 0, 0, 0, 1]  # delimiter
+                ],
+                [                   # second batch
+                [1, 0, 0, 1, 0, 0],
+                [0, 0, 0, 0, 0, 1], # delimiter
+                [0, 0, 0, 0, 0, 0]
+                ],
+                [                   # third batch
+                [1, 0, 1, 0, 0, 0],
+                [1, 0, 1, 1, 0, 0],
+                [0, 0, 0, 0, 0, 1]  # delimiter
+                ]], dtype=int32)
+
+        target =    Array([
+                [
+                [0, 1, 0, 0, 1, 0],
+                [1, 1, 0, 1, 0, 0],
+                [0, 0, 0, 0, 0, 0]
+                ],
+                [
+                [1, 0, 0, 1, 0, 0],
+                [0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0]
+                ],
+                [
+                [1, 0, 1, 0, 0, 0],
+                [1, 0, 1, 1, 0, 0],
+                [0, 0, 0, 0, 0, 0]
+                ]], dtype=int32)
+    """
+
     def update_curriculum_level(self, curriculum_params: dict):
         self.curriculum_scheduler.update_curriculum_level(curriculum_params)
 
     def __next__(self):
-        """Returns an input and a target, both of size (batch_size, max_curriculum_level, memory_depth).
-        Each item in the batch will have an array of random 0s and 1s with size (curriculum_level - 1, memory_depth - 1).
-        Aside from this, all values in the array will be zero for the target.
-        The input is the same as the target except for the inclusion of the delimiter (value 1) at location (curriculum_level, memory_depth).
-
-        This is implemented by first creating the full size array and then zeroing out each section.
-
-        Example:
-            batch_size = 3
-            memory_depth = 6
-
-            data =      Array([
-                    [                   # first batch
-                    [0, 1, 0, 0, 1, 0],
-                    [1, 1, 0, 1, 0, 0],
-                    [0, 0, 0, 0, 0, 1]  # delimiter
-                    ],
-                    [                   # second batch
-                    [1, 0, 0, 1, 0, 0],
-                    [0, 0, 0, 0, 0, 1], # delimiter
-                    [0, 0, 0, 0, 0, 0]
-                    ],
-                    [                   # third batch
-                    [1, 0, 1, 0, 0, 0],
-                    [1, 0, 1, 1, 0, 0],
-                    [0, 0, 0, 0, 0, 1]  # delimiter
-                    ]], dtype=int32)
-
-            target =    Array([
-                    [
-                    [0, 1, 0, 0, 1, 0],
-                    [1, 1, 0, 1, 0, 0],
-                    [0, 0, 0, 0, 0, 0]
-                    ],
-                    [
-                    [1, 0, 0, 1, 0, 0],
-                    [0, 0, 0, 0, 0, 0],
-                    [0, 0, 0, 0, 0, 0]
-                    ],
-                    [
-                    [1, 0, 1, 0, 0, 0],
-                    [1, 0, 1, 1, 0, 0],
-                    [0, 0, 0, 0, 0, 0]
-                    ]], dtype=int32)
-        """
         if self.iterations >= self.num_batches:
             raise StopIteration
         self.iterations += 1
