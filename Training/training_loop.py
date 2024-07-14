@@ -5,11 +5,11 @@ from typing import Callable, Iterable
 import jax
 import jax.numpy as jnp
 import optax
-import wandb
 from flax.training import train_state
 from jax.typing import ArrayLike
 from tqdm import tqdm
 
+import wandb
 from Common import globals
 
 

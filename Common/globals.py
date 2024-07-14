@@ -57,10 +57,77 @@ class MODELS:
     OPTIMIZER = "optimizer"
 
 
+# Datasets
+class DATASETS:
+    CACHE_LOCATION = "Datasets/cache"
+    CACHE_EXTENSION = ".npz"
+
+    class CONFIGS:
+        CURRICULUM_SCHEDULER = "curriculum_scheduler"
+        DATA_ENCODER = "data_encoder"
+        SPLIT = "split"
+
+    class ENCODERS:
+        VOCABULARY = "vocabulary"
+
+        class CONFIGS:
+            CACHE_DIR = "cache_dir"
+
+    class BABI:
+        NAME = "bAbI"
+        DATA_PATH = "tasks_1-20_v1-2"
+        CACHE = "cache"
+        DATA_EXTENSION = ".txt"
+        PUNCTUATION_MARKS = [".", "?", ","]
+
+        class SPLITS:
+            TEST = "test"
+            TRAIN = "train"
+
+        class CONFIGS:
+            SET = "set"
+
+        class SETS:
+            EN = "en"
+            EN_10K = "en-10k"
+            EN_VALID = "en-valid"
+            EN_VALID_10K = "en-valid-10k"
+            HN = "hn"
+            HN_10K = "hn-10k"
+            SHUFFLED = "shuffled"
+            SHUFFLED_10K = "shuffled-10k"
+
+        class TASKS:
+            TASKS = [x for x in range(1, 21)]
+            ID = {x: f"qa{x}" for x in range(1, 21)}
+            NAME = {
+                1: "single-supporting-fact",
+                2: "two-supporting-facts",
+                3: "three-supporting-facts",
+                4: "two-arg-relations",
+                5: "three-arg-relations",
+                6: "yes-no-questions",
+                7: "counting",
+                8: "lists-sets",
+                9: "simple-negation",
+                10: "indefinite-knowledge",
+                11: "basic-coreference",
+                12: "conjunction",
+                13: "compound-coreference",
+                14: "time-reasoning",
+                15: "basic-deduction",
+                16: "basic-induction",
+                17: "positional-reasoning",
+                18: "size-reasoning",
+                19: "path-finding",
+                20: "agents-motivations",
+            }
+
+
 # Curriculum
 class CURRICULUM:
     # initialization options
-    class OPTIONS:
+    class CONFIGS:
         MIN = "min difficulty"
         MAX = "max difficulty"
         LOSS_THRESHOLD = "loss threshold"

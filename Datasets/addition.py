@@ -68,6 +68,9 @@ class BinaryAdditionLoader(DataloaderInterface):
     def update_curriculum_level(self, curriculum_params: dict):
         self.curriculum_scheduler.update_curriculum_level(curriculum_params)
 
+    def update_split(self, new_split: str):
+        pass
+
     def __next__(self):
         if self.iterations >= self.num_batches:
             raise StopIteration
@@ -127,27 +130,33 @@ class BinaryAdditionLoader(DataloaderInterface):
 
 
 if __name__ == "__main__":
-    from Common.globals import CURRICULUM
+    from Common.globals import CURRICULUM, DATASETS
     from Training.Curriculum_zaremba2014 import CurriculumSchedulerZaremba2014
 
-    config = {
-        CURRICULUM.OPTIONS.ACCURACY_THRESHOLD: 0.9,
-        CURRICULUM.OPTIONS.MIN: 1,
-        CURRICULUM.OPTIONS.MAX: 10,
-        CURRICULUM.OPTIONS.ZAREMBA2014.P1: 0.10,
-        CURRICULUM.OPTIONS.ZAREMBA2014.P2: 0.25,
-        CURRICULUM.OPTIONS.ZAREMBA2014.P3: 0.65,
+    curric_config = {
+        CURRICULUM.CONFIGS.ACCURACY_THRESHOLD: 0.9,
+        CURRICULUM.CONFIGS.MIN: 1,
+        CURRICULUM.CONFIGS.MAX: 10,
+        CURRICULUM.CONFIGS.ZAREMBA2014.P1: 0.10,
+        CURRICULUM.CONFIGS.ZAREMBA2014.P2: 0.25,
+        CURRICULUM.CONFIGS.ZAREMBA2014.P3: 0.65,
     }
 
     batch_size = 2
     num_batches = 1
     memory_depth = 6
 
-    curric = CurriculumSchedulerZaremba2014(config)
+    config = {
+        DATASETS.CONFIGS.CURRICULUM_SCHEDULER: CurriculumSchedulerZaremba2014(
+            curric_config
+        ),
+    }
 
-    copy_loader = BinaryAdditionLoader(batch_size, num_batches, memory_depth, curric)
+    add_loader = BinaryAdditionLoader(
+        batch_size, num_batches, memory_depth, config=config
+    )
 
-    for data, target in copy_loader:
+    for data, target in add_loader:
         # print(f'{data=}')
         # print(f'{target=}')
         assert len(data.shape) == 3
@@ -157,9 +166,9 @@ if __name__ == "__main__":
         CURRICULUM.PARAMS.ACCURACY: 0.95,
     }
 
-    copy_loader.update_curriculum_level(curriculum_params)
-    copy_loader.update_batch_params(batch_size + 1, num_batches + 1)
-    for data, target in copy_loader:
+    add_loader.update_curriculum_level(curriculum_params)
+    add_loader.update_batch_params(batch_size + 1, num_batches + 1)
+    for data, target in add_loader:
         # print(f'{data=}')
         # print(f'{target=}')
         assert len(data.shape) == 3
