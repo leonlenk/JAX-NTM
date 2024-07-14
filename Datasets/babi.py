@@ -217,7 +217,7 @@ class BabiLoader(DataloaderInterface):
             os.makedirs(self.set_cache_path)
 
         # initialize the data encoder
-        encoder_config = {DATASETS.ENCODERS.CONFIGS.CACHE_DIR: self.set_path}
+        encoder_config = {DATASETS.ENCODERS.CONFIGS.CACHE_DIR: self.set_cache_path}
         self.data_encoder.initialize(encoder_config)
 
         # create the dataset
@@ -308,11 +308,12 @@ class BabiLoader(DataloaderInterface):
         with open(task_path, "r") as f:
             # loop through the lines
             for line in f:
+                # make everything lowercase
+                line = line.lower()
                 # split up the line by tabs
-                items = [f.strip() for f in line.split("\t")]
+                items = [x.strip() for x in line.split("\t")]
                 # the first part is the sentence e.g. "4 The office is north of the bedroom."
-                # before splitting by spaces, make everything lowercase and separate out punction marks
-                items[0] = items[0].lower()
+                # before splitting by spaces, separate out punction marks
                 for punctuation_mark in DATASETS.BABI.PUNCTUATION_MARKS:
                     items[0] = items[0].replace(
                         punctuation_mark, f" {punctuation_mark} "
@@ -376,10 +377,13 @@ if __name__ == "__main__":
 
     babi_loader = BabiLoader(batch_size, num_batches, memory_depth, config=config)
 
+    # print(f'{encoder.words_to_values=}')
+
     for data, target in babi_loader:
         # decoded_data = encoder.decode(data)
         # print(f'{decoded_data=}')
         # decoded_target = encoder.decode(target)
         # print(f'{decoded_target=}')
+
         assert len(data.shape) == 3
         assert len(target.shape) == 3
