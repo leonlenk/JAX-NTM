@@ -1,5 +1,6 @@
 import jax
 import jax.numpy as jnp
+import optax
 
 from Common.TrainingInterfaces import DataloaderInterface
 
@@ -55,6 +56,9 @@ class CopyLoader(DataloaderInterface):
 
     def update_curriculum_level(self, curriculum_params: dict):
         self.curriculum_scheduler.update_curriculum_level(curriculum_params)
+
+    def criterion(self, predictions, targets):
+        return jnp.sum(optax.losses.l2_loss(predictions, targets))
 
     def __next__(self):
         if self.iterations >= self.num_batches:

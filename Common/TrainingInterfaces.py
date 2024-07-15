@@ -94,9 +94,13 @@ class DataloaderInterface(ABC):
         pass
 
     @abstractmethod
+    def criterion(self, predictions: Array, targets: Array) -> Array:
+        raise NotImplementedError
+
+    @abstractmethod
     def __next__(self) -> tuple[jax.Array, jax.Array]:
         """Gets (or creates) the next batch in the dataset."""
-        pass
+        raise NotImplementedError
 
 
 class CurriculumSchedulerStub(CurriculumSchedulerInterface):
@@ -134,7 +138,7 @@ class TrainingConfigInterface(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def train_step(self, data: Array) -> dict:
+    def train_step(self, data: Array, target: Array, criterion: Callable) -> dict:
         raise NotImplementedError
 
     @abstractmethod

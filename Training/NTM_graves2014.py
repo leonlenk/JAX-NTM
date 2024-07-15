@@ -5,7 +5,8 @@ import jax.numpy as jnp
 import optax
 from flax.training import train_state
 
-from Common.BackboneInterface import BackboneInterface, PreviousState
+from Common import globals
+from Common.BackboneInterface import BackboneInterface
 from Common.ControllerInterface import ControllerInterface
 from Common.MemoryInterface import MemoryInterface
 from Common.TrainingInterfaces import ModelConfigInterface, TrainingConfigInterface
@@ -53,30 +54,54 @@ class TrainingConfig(TrainingConfigInterface):
         self.MEMORY_WIDTH = (1, model_config.memory_N)
         self.model, self.model_state, self.memory_model = self._init_models()
 
-    def loss_fn(self, model_params, memory_weights, data):
-        previous_state = PreviousState(
-            memory_weights, jnp.ones(self.MEMORY_WIDTH), jnp.ones(self.MEMORY_WIDTH)
-        )
-        for _ in range(self.model_config.input_length):
-            (data, read_data, previous_state), variables = self.model_state.apply_fn(
+    def loss_fn(self, model_params, memory_weights, data, target, criterion):
+        # batch the function
+        def prediction_fn(
+            data, memory_weights, read_previous, write_previous, memory_model
+        ):
+            (
+                (data, read_data, memory_weights, read_previous, write_previous),
+                variables,
+            ) = self.model_state.apply_fn(
                 {globals.JAX.PARAMS: model_params},
                 data,
-                self.memory_model,
-                previous_state,
+                memory_weights,
+                read_previous,
+                write_previous,
+                memory_model,
                 mutable=["state"],
             )
-            data = jnp.concat((data, read_data), axis=1)
+            return data, read_data, memory_weights, read_previous, write_previous
 
-        return jnp.sum(data)
+        batched_prediction_fn = jax.vmap(
+            prediction_fn, in_axes=(0, None, None, None, None)
+        )
 
-    def train_step(self, data):
-        gradient_fn = jax.grad(self.loss_fn, argnums=(0, 1))
-        model_grads, memory_grads = gradient_fn(
-            self.model_state.params, self.memory_model.weights, data
+        # processing loop
+        read_previous = jnp.ones(self.MEMORY_WIDTH)
+        write_previous = jnp.ones(self.MEMORY_WIDTH)
+        for _ in range(self.model_config.input_length):
+            data, read_data, memory_weights, read_previous, write_previous = (
+                batched_prediction_fn(
+                    data,
+                    memory_weights,
+                    read_previous,
+                    write_previous,
+                    self.memory_model,
+                )
+            )
+            data = jnp.concat((data, read_data), axis=-1)
+
+        return criterion(data[:, :, :12], target), ("placeholder",)
+
+    def train_step(self, data, target, criterion):
+        gradient_fn = jax.value_and_grad(self.loss_fn, argnums=(0, 1), has_aux=True)
+        ((loss, (metric,)), (model_grads, memory_grads)) = gradient_fn(
+            self.model_state.params, self.memory_model.weights, data, target, criterion
         )
         self.memory_model.apply_gradients(memory_grads)
         self.model_state = self.model_state.apply_gradients(grads=model_grads)
-        return {}
+        return {globals.METRICS.LOSS: loss}
 
     def val_step(self, data):
         return {}
@@ -113,12 +138,14 @@ class TrainingConfig(TrainingConfigInterface):
                 self.model_config.input_features,
             )
         )
-        init_previous_state = PreviousState(
+        params = model.init(
+            key3,
+            init_input,
             memory_model.weights,
             jnp.ones(self.MEMORY_WIDTH),
             jnp.ones(self.MEMORY_WIDTH),
+            memory_model,
         )
-        params = model.init(key3, init_input, memory_model, init_previous_state)
         model_state = train_state.TrainState.create(
             apply_fn=model.apply,
             tx=optax.adam(self.model_config.learning_rate),

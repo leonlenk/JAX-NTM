@@ -4,7 +4,7 @@ from flax import linen as nn
 from jax import Array
 
 from Common import globals
-from Common.BackboneInterface import BackboneInterface, PreviousState
+from Common.BackboneInterface import BackboneInterface
 from Common.ControllerInterface import ControllerInterface
 
 
@@ -24,7 +24,9 @@ class LSTMModel(BackboneInterface):
         self.bias_init = nn.initializers.normal()
 
     @nn.compact
-    def __call__(self, input, memory_model, previous_state):
+    def __call__(
+        self, input, memory_weights, read_previous, write_previous, memory_model
+    ):
         lstm_layers = [nn.OptimizedLSTMCell(self.features) for _ in range(self.layers)]
         hidden = lstm_layers[0].initialize_carry(self.prng_key, input.shape)
 
@@ -33,14 +35,14 @@ class LSTMModel(BackboneInterface):
 
         read_data, read_locations = self.read_head(
             input,
-            previous_state.read_previous,
-            previous_state.memory_weights,
+            read_previous,
+            memory_weights,
             memory_model,
         )
         memory_weights, write_locations = self.write_head(
             input,
-            previous_state.write_previous,
-            previous_state.memory_weights,
+            write_previous,
+            memory_weights,
             memory_model,
         )
 
@@ -51,11 +53,7 @@ class LSTMModel(BackboneInterface):
             )(dense_input)
         )
 
-        return (
-            output,
-            read_data,
-            PreviousState(memory_weights, read_locations, write_locations),
-        )
+        return (output, read_data, memory_weights, read_locations, write_locations)
 
 
 # basic test cases
@@ -84,10 +82,14 @@ if __name__ == "__main__":
 
     model = LSTMModel(key3, memory_m, layers, num_outputs, read_head, write_head)
     init_input = jnp.ones((input_length, input_features))
-    init_previous_state = PreviousState(
-        memory_model.weights, jnp.ones((1, memory_n)), jnp.ones((1, memory_n))
+    params = model.init(
+        key2,
+        init_input,
+        memory_model.weights,
+        jnp.ones((1, memory_n)),
+        jnp.ones((1, memory_n)),
+        memory_model,
     )
-    params = model.init(key2, init_input, memory_model, init_previous_state)
     model_state = train_state.TrainState.create(
         apply_fn=model.apply,
         tx=optax.adam(lr),
@@ -96,15 +98,25 @@ if __name__ == "__main__":
 
     def loss_fn(model_params, memory_weights):
         sample_batch = jnp.ones((input_length, input_features))
-        previous_state = PreviousState(
-            memory_weights, jnp.ones((1, memory_n)), jnp.ones((1, memory_n))
-        )
+        read_previous = jnp.ones((1, memory_n))
+        write_previous = jnp.ones((1, memory_n))
         for _ in range(num_recursions):
-            (sample_batch, read_data, previous_state), variables = model_state.apply_fn(
+            (
+                (
+                    sample_batch,
+                    read_data,
+                    memory_weights,
+                    read_previous,
+                    write_previous,
+                ),
+                variables,
+            ) = model_state.apply_fn(
                 {globals.JAX.PARAMS: model_params},
                 sample_batch,
+                memory_weights,
+                read_previous,
+                write_previous,
                 memory_model,
-                previous_state,
                 mutable=["state"],
             )
             sample_batch = jnp.concat((sample_batch, read_data), axis=1)
