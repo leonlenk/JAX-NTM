@@ -18,6 +18,9 @@ class MemoryLocation:
         self.strength = strength
 
 
+# Helper functions
+
+
 def read_from_weights(memory_state: list[MemoryLocation], weights: Array) -> Array:
     """Calculates the read vector
     :param memory_state: current memory state
@@ -57,6 +60,9 @@ def normalize_arith_mean_similarity(
 
     weights: Array = jnp.array(weights_list)
     return jnp.divide(weights, jnp.sum(weights))
+
+
+# Similarity functions
 
 
 def similarity_softmax(
@@ -113,6 +119,9 @@ def similarity_inverse_square(
     return weights
 
 
+# Metric functions
+
+
 def metric_euclidean_distance(head_state: Array, key: Array) -> float:
     """Implements euclidean distance metric
     :param head_state: current head state vector
@@ -123,6 +132,28 @@ def metric_euclidean_distance(head_state: Array, key: Array) -> float:
     sum_i((x_i - y_i)^2)^(1/2)
     """
     return jnp.linalg.norm(jnp.subtract(head_state, key))
+
+
+# Interpolation Functions
+def interpolation_Rn_function(
+    head_state: Array, interpolation_vector: Array, interpolation_gate: float
+) -> Array:
+    """Implements natural Rn interpolation
+    :param head_state: previous head state vector
+    :param interpolation_vector: vector "r" updating the state
+    :param interpolation_gate: scalar "g" in [0,1] indicating how strongly to interpolation
+        0 means the interpolation will be ignored
+        1 means the previous head state will be ignored
+
+    q * (1 - g) + r * g
+    """
+    return jnp.add(
+        jnp.multiply(head_state, 1 - interpolation_gate),
+        jnp.multiply(interpolation_vector, interpolation_gate),
+    )
+
+
+# Group action functions
 
 
 def group_action_Rn_addition(head_state: Array, action: Array) -> Array:
@@ -142,6 +173,7 @@ def group_action_Rn_addition(head_state: Array, action: Array) -> Array:
 # TODO group action and metric for SO3 on S2
 
 
+# TODO add "random access" section 4.3 - add interpolation functions for respective spaces
 class Memory(MemoryInterface):
     """Memory interface for NTM from Yang 2017 (arXiv:1611.02854).
 
@@ -227,17 +259,21 @@ class Memory(MemoryInterface):
 
     def set_memory_functions(
         self,
+        interpolation_fn: Callable[[Array, Array, float], Array],
         group_action_fn: Callable[[Array, Array], Array],
         metric_fn: Callable[[Array, Array], float],
         similarity_fn: Callable[..., Array],
     ):
         """Initializes functions defining the memory accessing scheme
+        :param interpolation_fn: maps (previous head state, interpolation vector, interpolation gate) to (new head state)
+            called before the group action
         :param group_action_fn: maps (previous head state, action) to (new head state)
         :param metric_fn: maps (head_state, key) to (distance)
         :param similarity_fn: maps (memory state, head state, metric, additional parameters) to (read vector)
         """
         self.group_action_fn = group_action_fn
         self.metric_fn = metric_fn
+        self.interpolation_fn = interpolation_fn
         self.similarity_fn = similarity_fn
 
     def apply_gradients(self, gradients):
@@ -253,9 +289,17 @@ class Memory(MemoryInterface):
         self.memory_state.append(MemoryLocation(head_state, memory_vector, strength))
 
     def address(
-        self, previous_head_state: Array, action: Array, *args
+        self,
+        previous_head_state: Array,
+        interpolation_vector: Array,
+        interpolation_gate: float,
+        action: Array,
+        *args,
     ) -> tuple[Array, Array]:
-        head_state = self.group_action_fn(previous_head_state, action)
+        head_state = self.interpolation_fn(
+            previous_head_state, interpolation_vector, interpolation_gate
+        )
+        head_state = self.group_action_fn(head_state, action)
         return head_state, self.similarity_fn(
             self.memory_state, head_state, self.metric_fn, *args
         )
@@ -276,7 +320,10 @@ if __name__ == "__main__":
 
     # initialize Rn addition with euclidean distance metric and softmax similarity
     memory.set_memory_functions(
-        group_action_Rn_addition, metric_euclidean_distance, similarity_softmax
+        interpolation_Rn_function,
+        group_action_Rn_addition,
+        metric_euclidean_distance,
+        similarity_softmax,
     )
 
     temperature = 1
@@ -285,7 +332,11 @@ if __name__ == "__main__":
     action = jnp.ones(memory_depth)
     memory_vector = jnp.arange(memory_depth).astype(jnp.float32)
     strength = 0.7
-    head_state, weights = memory.address(head_state, action, temperature)
+    interpolation_vector = jnp.ones(memory_depth)
+    interpolation_scalar = 0.2
+    head_state, weights = memory.address(
+        head_state, interpolation_vector, interpolation_scalar, action, temperature
+    )
     # print(f'{head_state=}')
     memory.write(head_state, memory_vector, strength)
 
@@ -293,11 +344,15 @@ if __name__ == "__main__":
     action = action.at[0].set(1)
     memory_vector = jnp.ones(memory_depth)
     strength = 0.9
-    head_state, weights = memory.address(head_state, action, temperature)
+    head_state, weights = memory.address(
+        head_state, interpolation_vector, interpolation_scalar, action, temperature
+    )
     # print(f'{head_state=}')
     memory.write(head_state, memory_vector, strength)
 
-    head_state, weights = memory.address(head_state, action, temperature)
+    head_state, weights = memory.address(
+        head_state, interpolation_vector, interpolation_scalar, action, temperature
+    )
     read_vector = memory.read(weights)
     # print(f'{read_vector=}')
 
