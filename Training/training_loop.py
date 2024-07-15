@@ -55,14 +55,19 @@ def train(
             tags=wandb_tags,
         )
 
-    for epoch in tqdm(range(1, num_epochs + 1)):
+    for epoch in range(1, num_epochs + 1):
         # train the model on each batch
         train_metrics: list[dict] = []
-        for data, target in tqdm(train_dataset):
-            # run the train step function
-            metrics = training_config.train_step(data, target, train_dataset.criterion)
-            # record the results
-            train_metrics.append(metrics)
+        with tqdm(train_dataset) as pbar:
+            pbar.set_description(f"Epoch {epoch}")
+            for data, target in pbar:
+                # run the train step function
+                metrics = training_config.train_step(
+                    data, target, train_dataset.criterion
+                )
+                # record the results
+                train_metrics.append(metrics)
+                pbar.set_postfix(loss=metrics[globals.METRICS.LOSS])
 
         # combine the metrics from each batch into a single dictionary to log
         train_metric = metric_aggregator(train_metrics)
