@@ -7,6 +7,7 @@ Global definitions of hard coded variables.
 class JAX:
     PARAMS = "params"
     RANDOM_SEED = 137
+    EPSILON = 1e-6
 
 
 # Machine Specific Variables

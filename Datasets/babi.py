@@ -364,7 +364,7 @@ if __name__ == "__main__":
     }
 
     batch_size = 2
-    num_batches = 1
+    num_batches = 2
     memory_depth = 16
 
     encoder = VocabularyEncoder(memory_depth)
@@ -373,6 +373,7 @@ if __name__ == "__main__":
             curric_config
         ),
         DATASETS.CONFIGS.DATA_ENCODER: encoder,
+        DATASETS.BABI.CONFIGS.SET: DATASETS.BABI.SETS.EN,
     }
 
     babi_loader = BabiLoader(batch_size, num_batches, memory_depth, config=config)
