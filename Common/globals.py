@@ -48,21 +48,6 @@ class CONFIG:
     VAL_PERIOD = "validation_period_in_epochs"
 
 
-class MODELS:
-    MEMORY = "memory_model"
-    READ_CONTROLLER = "read_controller"
-    WRITE_CONTROLLER = "write_controller"
-    MACHINE = "machine"
-    BASE = "base_model"
-    OPTIMIZER = "optimizer"
-
-    class PARAMS:
-        INPUT_LENGTH = "model_input_length"
-        INPUT_FEATUERS = "model_input_features"
-        NUM_OUTPUTS = "model_num_outputs"
-        NUM_LAYERS = "model_num_layers"
-
-
 # Curriculum
 class CURRICULUM:
     # initialization options

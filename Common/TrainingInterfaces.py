@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from typing import Callable
 
 import jax
 import jax.numpy as jnp
@@ -112,21 +113,34 @@ class CurriculumSchedulerStub(CurriculumSchedulerInterface):
 
 
 class ModelConfigInterface(ABC):
+    learning_rate: float
+    optimizer: Callable
+    memory_M: int
+    memory_N: int
+
     @abstractmethod
     def __init__(self) -> None:
         raise NotImplementedError
 
 
 class TrainingConfigInterface(ABC):
-    @abstractmethod
-    def __init__(self, model_config: ModelConfigInterface) -> None:
-        self.model_config = model_config
-        self.model, self.model_state, self.memory_model = self._init_models(
-            model_config
-        )
+    model_config: ModelConfigInterface
+    model: BackboneInterface
+    model_state: TrainState
+    memory_model: MemoryInterface
 
     @abstractmethod
-    def _init_models(
-        self, model_config: ModelConfigInterface
-    ) -> tuple[BackboneInterface, TrainState, MemoryInterface]:
+    def __init__(self, model_config) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def train_step(self, data: Array) -> dict:
+        raise NotImplementedError
+
+    @abstractmethod
+    def val_step(self, data: Array) -> dict:
+        raise NotImplementedError
+
+    @abstractmethod
+    def _init_models(self) -> tuple[BackboneInterface, TrainState, MemoryInterface]:
         raise NotImplementedError

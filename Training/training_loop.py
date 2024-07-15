@@ -1,5 +1,3 @@
-import random
-import time
 from typing import Callable, Iterable
 
 import jax.numpy as jnp
@@ -9,7 +7,7 @@ from jax.typing import ArrayLike
 from tqdm import tqdm
 
 from Common import globals
-from Common.globals import MODELS
+from Common.TrainingInterfaces import TrainingConfigInterface
 
 
 def average_metric(metrics: list[dict]) -> dict:
@@ -25,39 +23,42 @@ def average_metric(metrics: list[dict]) -> dict:
 
 def train(
     project_name: str,
-    train_config: dict,
-    state: ArrayLike,
-    train_step: Callable[[ArrayLike, ArrayLike, dict], tuple[ArrayLike, dict]],
+    training_config: TrainingConfigInterface,
+    num_epochs: int,
     train_dataset: Iterable,
+    val_period: int | None = None,
     val_step: Callable[[ArrayLike, ArrayLike, dict], dict] | None = None,
     val_dataset: Iterable | None = None,
     metric_aggregator: Callable[[list[dict]], dict] = average_metric,
     wandb_tags: list[str] = [],
     wandb_run_name: str | None = None,
-) -> ArrayLike:
-    assert (
-        globals.CONFIG.EPOCHS in train_config
-    ), "The number of epochs to train is a required config"
-
+):
     if val_dataset is not None or val_step is not None:
         assert (
             val_dataset is not None and val_step is not None
         ), "Both val_dataset and val_step are required to perform validation"
 
+    wandb_config = {
+        globals.CONFIG.EPOCHS: num_epochs,
+        globals.CONFIG.LEARNING_RATE: training_config.model_config.learning_rate,
+        globals.MACHINES.GRAVES2014.MEMORY.N: training_config.model_config.memory_N,
+        globals.MACHINES.GRAVES2014.MEMORY.M: training_config.model_config.memory_M,
+    }
+
     wandb.init(
         project=project_name,
         name=wandb_run_name,
         job_type=globals.WANDB.JOBS.TRAIN,
-        config=train_config,
+        config=wandb_config,
         tags=wandb_tags,
     )
 
-    for epoch in tqdm(range(1, train_config[globals.CONFIG.EPOCHS] + 1)):
+    for epoch in tqdm(range(1, num_epochs + 1)):
         # train the model on each batch
         train_metrics: list[dict] = []
         for data in tqdm(train_dataset):
             # run the train step function
-            state, metrics = train_step(state, data, train_config)
+            metrics = training_config.train_step(data)
             # record the results
             train_metrics.append(metrics)
 
@@ -73,14 +74,11 @@ def train(
 
         # perform validation if desired
         if val_dataset is not None and val_step is not None:
-            if (
-                globals.CONFIG.VAL_PERIOD not in train_config
-                or epoch % train_config[globals.CONFIG.VAL_PERIOD] == 0
-            ):
+            if val_period is not None and epoch % val_period == 0:
                 val_metrics: list[dict] = []
                 for data in tqdm(train_dataset):
                     # run the val step function
-                    metrics = val_step(state, data, train_config)
+                    metrics = training_config.val_step(data)
                     # record the results
                     val_metrics.append(metrics)
                 # combine the metrics from each batch into a single dictionary to log
@@ -95,50 +93,36 @@ def train(
 
         # TODO save best model based on validation results
 
-    return state
-
 
 # TODO add "evaluate" (aka "inference"). Add "test" separately?
 if __name__ == "__main__":
     from Backbone.NTM_graves2014 import LSTMModel
     from Controllers.NTM_graves2014 import NTMReadController, NTMWriteController
     from Memories.NTM_graves2014 import Memory
+    from Training.NTM_graves2014 import ModelConfig, TrainingConfig
 
-    train_config = {
-        globals.CONFIG.EPOCHS: 5,
-        globals.CONFIG.BATCH_SIZE: 32,
-        globals.CONFIG.LEARNING_RATE: 1e-4,
-        globals.MACHINES.GRAVES2014.MEMORY.N: 8,
-        globals.MACHINES.GRAVES2014.MEMORY.M: 12,
-    }
+    model_config = ModelConfig(
+        learning_rate=1e-4,
+        optimizer=optax.adam,
+        memory_class=Memory,
+        backbone_class=LSTMModel,
+        read_head_class=NTMReadController,
+        write_head_class=NTMWriteController,
+        memory_M=12,
+        memory_N=8,
+        num_layers=4,
+        num_outputs=20,
+        input_length=1,
+        input_features=20,
+    )
+    training_config = TrainingConfig(model_config)
 
-    model_config = {
-        MODELS.MEMORY: Memory,
-        MODELS.WRITE_CONTROLLER: NTMWriteController,
-        MODELS.READ_CONTROLLER: NTMReadController,
-        MODELS.BASE: LSTMModel,
-        MODELS.OPTIMIZER: optax.adam,
-        MODELS.PARAMS.NUM_LAYERS: 4,
-        MODELS.PARAMS.INPUT_FEATUERS: 20,
-        MODELS.PARAMS.INPUT_LENGTH: 1,
-        MODELS.PARAMS.NUM_OUTPUTS: 20,
-    }
-
-    state = 1
     dataset = range(3)
 
-    def train_step(state, data, train_config):
-        time.sleep(0.3)
-        metrics = {}
-        metrics[globals.METRICS.LOSS] = random.uniform(0, 1 / state)
-        metrics[globals.METRICS.ACCURACY] = random.uniform(0, 1 - 1 / state)
-        return state + 1, metrics
-
-    output_state = train(
+    train(
         project_name=globals.WANDB.PROJECTS.CODE_TESTING,
-        train_config=train_config,
-        state=state,
-        train_step=train_step,
+        training_config=training_config,
+        num_epochs=5,
         train_dataset=dataset,
         wandb_tags=[globals.WANDB.TAGS.CODE_TESTING],
     )

@@ -14,7 +14,7 @@ from Common.TrainingInterfaces import ModelConfigInterface, TrainingConfigInterf
 class ModelConfig(ModelConfigInterface):
     def __init__(
         self,
-        learning_rate: int,
+        learning_rate: float,
         optimizer: Callable,
         memory_class: Type[MemoryInterface],
         backbone_class: Type[BackboneInterface],
@@ -42,60 +42,86 @@ class ModelConfig(ModelConfigInterface):
 
 
 class TrainingConfig(TrainingConfigInterface):
+    model_config: ModelConfig
+
     def __init__(self, model_config: ModelConfig) -> None:
         self.model_config = model_config
-        self.model, self.model_state, self.memory_model = self._init_models(
-            model_config
-        )
-
-    def train_step(self) -> None:
-        pass
-
-    def _init_models(
-        self, model_config: ModelConfig
-    ) -> tuple[BackboneInterface, train_state.TrainState, MemoryInterface]:
-        MEMORY_SHAPE = (
+        self.MEMORY_SHAPE = (
             model_config.memory_N,
             model_config.memory_M,
         )
-        MEMORY_WIDTH = (1, model_config.memory_N)
+        self.MEMORY_WIDTH = (1, model_config.memory_N)
+        self.model, self.model_state, self.memory_model = self._init_models()
 
+    def loss_fn(self, model_params, memory_weights, data):
+        previous_state = PreviousState(
+            memory_weights, jnp.ones(self.MEMORY_WIDTH), jnp.ones(self.MEMORY_WIDTH)
+        )
+        for _ in range(self.model_config.input_length):
+            (data, read_data, previous_state), variables = self.model_state.apply_fn(
+                {globals.JAX.PARAMS: model_params},
+                data,
+                self.memory_model,
+                previous_state,
+                mutable=["state"],
+            )
+            data = jnp.concat((data, read_data), axis=1)
+
+        return jnp.sum(data)
+
+    def train_step(self, data):
+        gradient_fn = jax.grad(self.loss_fn, argnums=(0, 1))
+        model_grads, memory_grads = gradient_fn(
+            self.model_state.params, self.memory_model.weights, data
+        )
+        self.memory_model.apply_gradients(memory_grads)
+        self.model_state = self.model_state.apply_gradients(grads=model_grads)
+        return {}
+
+    def val_step(self, data):
+        return {}
+
+    def _init_models(
+        self,
+    ) -> tuple[BackboneInterface, train_state.TrainState, MemoryInterface]:
         rng_key = jax.random.key(globals.JAX.RANDOM_SEED)
         key1, key2, key3 = jax.random.split(rng_key, num=3)
 
         # init memory
-        memory_model = model_config.memory_class(
+        memory_model = self.model_config.memory_class(
             key1,
-            (1, *MEMORY_SHAPE),
-            model_config.optimizer(model_config.learning_rate),
+            (1, *self.MEMORY_SHAPE),
+            self.model_config.optimizer(self.model_config.learning_rate),
         )
 
         # init read and write heads
-        read_head = model_config.read_head_class(*MEMORY_SHAPE)
-        write_head = model_config.write_head_class(*MEMORY_SHAPE)
+        read_head = self.model_config.read_head_class(*self.MEMORY_SHAPE)
+        write_head = self.model_config.write_head_class(*self.MEMORY_SHAPE)
 
         # init backbone
-        model = model_config.backbone_class(
+        model = self.model_config.backbone_class(
             key2,
-            model_config.memory_M,
-            model_config.num_layers,
-            model_config.num_outputs,
+            self.model_config.memory_M,
+            self.model_config.num_layers,
+            self.model_config.num_outputs,
             read_head,
             write_head,
         )
         init_input = jnp.ones(
             (
-                model_config.input_length,
-                model_config.input_features,
+                self.model_config.input_length,
+                self.model_config.input_features,
             )
         )
         init_previous_state = PreviousState(
-            memory_model.weights, jnp.ones(MEMORY_WIDTH), jnp.ones(MEMORY_WIDTH)
+            memory_model.weights,
+            jnp.ones(self.MEMORY_WIDTH),
+            jnp.ones(self.MEMORY_WIDTH),
         )
         params = model.init(key3, init_input, memory_model, init_previous_state)
         model_state = train_state.TrainState.create(
             apply_fn=model.apply,
-            tx=optax.adam(model_config.learning_rate),
+            tx=optax.adam(self.model_config.learning_rate),
             params=params[globals.JAX.PARAMS],
         )
 
