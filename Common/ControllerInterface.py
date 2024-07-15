@@ -7,6 +7,9 @@ from Common.MemoryInterface import MemoryInterface
 
 
 class ControllerInterface(ABC, nn.Module):
+    N_dim_memory: int
+    M_dim_memory: int
+
     @abstractmethod
     def setup(self) -> None:
         raise NotImplementedError

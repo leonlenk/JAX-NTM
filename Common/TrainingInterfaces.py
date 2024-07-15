@@ -2,9 +2,12 @@ from abc import ABC, abstractmethod
 
 import jax
 import jax.numpy as jnp
+from flax.training.train_state import TrainState
 from jax import Array
 
 from Common import globals
+from Common.BackboneInterface import BackboneInterface
+from Common.MemoryInterface import MemoryInterface
 
 
 class CurriculumSchedulerInterface(ABC):
@@ -106,3 +109,24 @@ class CurriculumSchedulerStub(CurriculumSchedulerInterface):
 
     def get_curriculum(self, batch_size: int) -> Array:
         return jnp.ones((batch_size,))
+
+
+class ModelConfigInterface(ABC):
+    @abstractmethod
+    def __init__(self) -> None:
+        raise NotImplementedError
+
+
+class TrainingConfigInterface(ABC):
+    @abstractmethod
+    def __init__(self, model_config: ModelConfigInterface) -> None:
+        self.model_config = model_config
+        self.model, self.model_state, self.memory_model = self._init_models(
+            model_config
+        )
+
+    @abstractmethod
+    def _init_models(
+        self, model_config: ModelConfigInterface
+    ) -> tuple[BackboneInterface, TrainState, MemoryInterface]:
+        raise NotImplementedError

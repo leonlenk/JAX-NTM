@@ -2,15 +2,14 @@ import random
 import time
 from typing import Callable, Iterable
 
-import jax
 import jax.numpy as jnp
 import optax
 import wandb
-from flax.training import train_state
 from jax.typing import ArrayLike
 from tqdm import tqdm
 
 from Common import globals
+from Common.globals import MODELS
 
 
 def average_metric(metrics: list[dict]) -> dict:
@@ -100,61 +99,6 @@ def train(
 
 
 # TODO add "evaluate" (aka "inference"). Add "test" separately?
-
-
-def init_models(train_config, model_config):
-    MEMORY_SHAPE = (
-        train_config[globals.MACHINES.GRAVES2014.MEMORY.N],
-        train_config[globals.MACHINES.GRAVES2014.MEMORY.M],
-    )
-    MEMORY_WIDTH = (1, train_config[globals.MACHINES.GRAVES2014.MEMORY.N])
-    DATA_SHAPE = (1, train_config[globals.MACHINES.GRAVES2014.MEMORY.M])
-
-    rng_key = jax.random.key(globals.JAX.RANDOM_SEED)
-    key1, key2, key3, key4 = jax.random.split(rng_key, num=4)
-
-    # init memory
-    memory_model = model_config[globals.MODELS.MEMORY](
-        key1,
-        (1, *MEMORY_SHAPE),
-        model_config[globals.MODELS.OPTIMIZER](
-            train_config[globals.CONFIG.LEARNING_RATE]
-        ),
-    )
-
-    # init read controller
-    read_controller = model_config[globals.MODELS.READ_CONTROLLER](*MEMORY_SHAPE)
-    read_variables = read_controller.init(
-        key2,
-        jnp.ones(DATA_SHAPE),
-        jnp.ones(MEMORY_WIDTH),
-        memory_model.weights,
-        memory_model,
-    )
-    read_state = train_state.TrainState.create(
-        apply_fn=read_controller.apply,
-        tx=model_config[globals.MODELS.OPTIMIZER],
-        params=read_variables[globals.JAX.PARAMS],
-    )
-
-    # init write controller
-    write_controller = model_config[globals.MODELS.WRITE_CONTROLLER](*MEMORY_SHAPE)
-    write_variables = write_controller.init(
-        key3,
-        jnp.ones(DATA_SHAPE),
-        jnp.ones(MEMORY_WIDTH),
-        memory_model.weights,
-        memory_model,
-    )
-    write_state = train_state.TrainState.create(
-        apply_fn=write_controller.apply,
-        tx=model_config[globals.MODELS.OPTIMIZER],
-        params=write_variables[globals.JAX.PARAMS],
-    )
-
-    return read_state, write_state, memory_model
-
-
 if __name__ == "__main__":
     from Backbone.NTM_graves2014 import LSTMModel
     from Controllers.NTM_graves2014 import NTMReadController, NTMWriteController
@@ -169,11 +113,15 @@ if __name__ == "__main__":
     }
 
     model_config = {
-        globals.MODELS.MEMORY: Memory,
-        globals.MODELS.WRITE_CONTROLLER: NTMWriteController,
-        globals.MODELS.READ_CONTROLLER: NTMReadController,
-        globals.MODELS.BASE: LSTMModel,
-        globals.MODELS.OPTIMIZER: optax.adam,
+        MODELS.MEMORY: Memory,
+        MODELS.WRITE_CONTROLLER: NTMWriteController,
+        MODELS.READ_CONTROLLER: NTMReadController,
+        MODELS.BASE: LSTMModel,
+        MODELS.OPTIMIZER: optax.adam,
+        MODELS.PARAMS.NUM_LAYERS: 4,
+        MODELS.PARAMS.INPUT_FEATUERS: 20,
+        MODELS.PARAMS.INPUT_LENGTH: 1,
+        MODELS.PARAMS.NUM_OUTPUTS: 20,
     }
 
     state = 1

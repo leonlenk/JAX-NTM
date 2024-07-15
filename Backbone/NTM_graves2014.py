@@ -4,18 +4,11 @@ from flax import linen as nn
 from jax import Array
 
 from Common import globals
+from Common.BackboneInterface import BackboneInterface, PreviousState
 from Common.ControllerInterface import ControllerInterface
-from Common.MemoryInterface import MemoryInterface
 
 
-class PreviousState:
-    def __init__(self, memory_weights, read_previous, write_previous):
-        self.memory_weights = memory_weights
-        self.read_previous = read_previous
-        self.write_previous = write_previous
-
-
-class LSTMModel(nn.Module):
+class LSTMModel(BackboneInterface):
     """Basic stacked LSTM for controlling an NTM"""
 
     prng_key: Array
@@ -31,9 +24,7 @@ class LSTMModel(nn.Module):
         self.bias_init = nn.initializers.normal()
 
     @nn.compact
-    def __call__(
-        self, input: Array, memory_model: MemoryInterface, previous_state: PreviousState
-    ) -> tuple[Array, Array, PreviousState]:
+    def __call__(self, input, memory_model, previous_state):
         lstm_layers = [nn.OptimizedLSTMCell(self.features) for _ in range(self.layers)]
         hidden = lstm_layers[0].initialize_carry(self.prng_key, input.shape)
 
