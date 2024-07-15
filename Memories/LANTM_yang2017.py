@@ -42,6 +42,10 @@ def normalize_arith_mean_similarity(
     :param similarity_function: function which takes in (head state, key, strength) and returns the weight
 
     :return: a list of normalized weights for each memory location
+
+    s_i * S(q, k_i)
+    /
+    sum_j(s_j * S(q, k_j))
     """
     weights_list: list[float] = []
     for memory_location in memory_state:
@@ -71,7 +75,7 @@ def similarity_softmax(
 
     s_i * e^(-d(q,k_i)^2 / T)
     /
-    sum_i(s_i * e^(-d(q,k_i)^2 / T))
+    sum_j(s_j * e^(-d(q,k_j)^2 / T))
     """
 
     def softmax(head_state: Array, key: Array, strength: float) -> float:
@@ -96,7 +100,7 @@ def similarity_inverse_square(
 
     s_i / (d(q,k_i)^2 + ε)
     /
-    sum_i(s_i / d(q,k_i)^2 + ε))
+    sum_j(s_j / d(q,k_j)^2 + ε))
     """
 
     def inverse_square(head_state: Array, key: Array, strength: float) -> float:
@@ -206,7 +210,7 @@ class Memory(MemoryInterface):
                 W_i(q, Σ, T) =                          # softmax weighted by s for a given temperature "T"
                     s_i * e^(-d(q,k_i)^2 / T)
                     /
-                    sum_i(s_i * e^(-d(q,k_i)^2 / T))
+                    sum_j(s_i * e^(-d(q,k_j)^2 / T))
     """
 
     def __init__(
