@@ -60,6 +60,9 @@ class CopyLoader(DataloaderInterface):
     def criterion(self, predictions, targets):
         return jnp.mean(optax.losses.l2_loss(predictions, targets))
 
+    def update_split(self, new_split: str):
+        pass
+
     def __next__(self):
         if self.iterations >= self.num_batches:
             raise StopIteration
@@ -95,25 +98,29 @@ class CopyLoader(DataloaderInterface):
 
 
 if __name__ == "__main__":
-    from Common.globals import CURRICULUM
+    from Common.globals import CURRICULUM, DATASETS
     from Training.Curriculum_zaremba2014 import CurriculumSchedulerZaremba2014
 
-    config = {
-        CURRICULUM.OPTIONS.ACCURACY_THRESHOLD: 0.9,
-        CURRICULUM.OPTIONS.MIN: 1,
-        CURRICULUM.OPTIONS.MAX: 20,
-        CURRICULUM.OPTIONS.ZAREMBA2014.P1: 0.10,
-        CURRICULUM.OPTIONS.ZAREMBA2014.P2: 0.25,
-        CURRICULUM.OPTIONS.ZAREMBA2014.P3: 0.65,
+    curric_config = {
+        CURRICULUM.CONFIGS.ACCURACY_THRESHOLD: 0.9,
+        CURRICULUM.CONFIGS.MIN: 1,
+        CURRICULUM.CONFIGS.MAX: 20,
+        CURRICULUM.CONFIGS.ZAREMBA2014.P1: 0.10,
+        CURRICULUM.CONFIGS.ZAREMBA2014.P2: 0.25,
+        CURRICULUM.CONFIGS.ZAREMBA2014.P3: 0.65,
     }
 
     batch_size = 5
     num_batches = 1
     memory_depth = 6
 
-    curric = CurriculumSchedulerZaremba2014(config)
+    config = {
+        DATASETS.CONFIGS.CURRICULUM_SCHEDULER: CurriculumSchedulerZaremba2014(
+            curric_config
+        ),
+    }
 
-    copy_loader = CopyLoader(batch_size, num_batches, memory_depth, curric)
+    copy_loader = CopyLoader(batch_size, num_batches, memory_depth, config=config)
 
     for data, target in copy_loader:
         # print(f'{data=}')

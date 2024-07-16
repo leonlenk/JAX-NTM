@@ -132,19 +132,20 @@ if __name__ == "__main__":
     training_config = TrainingConfig(model_config)
 
     curriculum_config = {
-        CURRICULUM.OPTIONS.ACCURACY_THRESHOLD: 0.9,
-        CURRICULUM.OPTIONS.MIN: 1,
-        CURRICULUM.OPTIONS.MAX: 10,
-        CURRICULUM.OPTIONS.ZAREMBA2014.P1: 0.10,
-        CURRICULUM.OPTIONS.ZAREMBA2014.P2: 0.25,
-        CURRICULUM.OPTIONS.ZAREMBA2014.P3: 0.65,
+        CURRICULUM.CONFIGS.ACCURACY_THRESHOLD: 0.9,
+        CURRICULUM.CONFIGS.MIN: 1,
+        CURRICULUM.CONFIGS.MAX: 10,
+        CURRICULUM.CONFIGS.ZAREMBA2014.P1: 0.10,
+        CURRICULUM.CONFIGS.ZAREMBA2014.P2: 0.25,
+        CURRICULUM.CONFIGS.ZAREMBA2014.P3: 0.65,
     }
     curric = CurriculumSchedulerZaremba2014(curriculum_config)
+    dataset_config = {globals.DATASETS.CONFIGS.CURRICULUM_SCHEDULER: curric}
     dataset = CopyLoader(
         batch_size=32,
         num_batches=10,
         memory_depth=MEMORY_DEPTH,
-        curriculum_scheduler=curric,
+        config=dataset_config,
     )
 
     train(

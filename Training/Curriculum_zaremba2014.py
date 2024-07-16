@@ -10,11 +10,11 @@ from Common.TrainingInterfaces import CurriculumSchedulerInterface
 class CurriculumSchedulerZaremba2014(CurriculumSchedulerInterface):
     def __init__(self, config: dict = {}):
         required_params = [
-            CURRICULUM.OPTIONS.MIN,
-            CURRICULUM.OPTIONS.MAX,
-            CURRICULUM.OPTIONS.ZAREMBA2014.P1,
-            CURRICULUM.OPTIONS.ZAREMBA2014.P2,
-            CURRICULUM.OPTIONS.ZAREMBA2014.P3,
+            CURRICULUM.CONFIGS.MIN,
+            CURRICULUM.CONFIGS.MAX,
+            CURRICULUM.CONFIGS.ZAREMBA2014.P1,
+            CURRICULUM.CONFIGS.ZAREMBA2014.P2,
+            CURRICULUM.CONFIGS.ZAREMBA2014.P3,
         ]
 
         assert all(
@@ -22,26 +22,26 @@ class CurriculumSchedulerZaremba2014(CurriculumSchedulerInterface):
         ), f"Missing required config params: {[x for x in required_params if x not in config]}"
 
         assert (
-            CURRICULUM.OPTIONS.ACCURACY_THRESHOLD in config
-            or CURRICULUM.OPTIONS.LOSS_THRESHOLD in config
-        ), f"Either an {CURRICULUM.OPTIONS.ACCURACY_THRESHOLD} or a {CURRICULUM.OPTIONS.LOSS_THRESHOLD} is required."
+            CURRICULUM.CONFIGS.ACCURACY_THRESHOLD in config
+            or CURRICULUM.CONFIGS.LOSS_THRESHOLD in config
+        ), f"Either an {CURRICULUM.CONFIGS.ACCURACY_THRESHOLD} or a {CURRICULUM.CONFIGS.LOSS_THRESHOLD} is required."
 
-        if CURRICULUM.OPTIONS.RANDOM_SEED in config:
-            self.prng = jax.random.key(config[CURRICULUM.OPTIONS.RANDOM_SEED])
+        if CURRICULUM.CONFIGS.RANDOM_SEED in config:
+            self.prng = jax.random.key(config[CURRICULUM.CONFIGS.RANDOM_SEED])
         else:
             self.prng = jax.random.key(globals.JAX.RANDOM_SEED)
 
         self.config = config
 
-        self.curriculum_level = self.config[CURRICULUM.OPTIONS.MIN]
+        self.curriculum_level = self.config[CURRICULUM.CONFIGS.MIN]
 
     def update_curriculum_level(self, curriculum_params: dict):
         check_accuracy = (
-            CURRICULUM.OPTIONS.ACCURACY_THRESHOLD in self.config
+            CURRICULUM.CONFIGS.ACCURACY_THRESHOLD in self.config
             and CURRICULUM.PARAMS.ACCURACY in curriculum_params
         )
         check_loss = (
-            CURRICULUM.OPTIONS.LOSS_THRESHOLD in self.config
+            CURRICULUM.CONFIGS.LOSS_THRESHOLD in self.config
             and CURRICULUM.PARAMS.LOSS in curriculum_params
         )
 
@@ -54,19 +54,19 @@ class CurriculumSchedulerZaremba2014(CurriculumSchedulerInterface):
         if check_accuracy:
             if (
                 curriculum_params[CURRICULUM.PARAMS.ACCURACY]
-                > self.config[CURRICULUM.OPTIONS.ACCURACY_THRESHOLD]
+                > self.config[CURRICULUM.CONFIGS.ACCURACY_THRESHOLD]
             ):
                 increment_level = True
         if check_loss:
             if (
                 curriculum_params[CURRICULUM.PARAMS.LOSS]
-                < self.config[CURRICULUM.OPTIONS.LOSS_THRESHOLD]
+                < self.config[CURRICULUM.CONFIGS.LOSS_THRESHOLD]
             ):
                 increment_level = True
 
         if (
             increment_level
-            and self.curriculum_level < self.config[CURRICULUM.OPTIONS.MAX]
+            and self.curriculum_level < self.config[CURRICULUM.CONFIGS.MAX]
         ):
             self.curriculum_level += 1
 
@@ -79,9 +79,9 @@ class CurriculumSchedulerZaremba2014(CurriculumSchedulerInterface):
         options = jnp.arange(1, 4)
         probs = jnp.array(
             [
-                self.config[CURRICULUM.OPTIONS.ZAREMBA2014.P1],
-                self.config[CURRICULUM.OPTIONS.ZAREMBA2014.P2],
-                self.config[CURRICULUM.OPTIONS.ZAREMBA2014.P3],
+                self.config[CURRICULUM.CONFIGS.ZAREMBA2014.P1],
+                self.config[CURRICULUM.CONFIGS.ZAREMBA2014.P2],
+                self.config[CURRICULUM.CONFIGS.ZAREMBA2014.P3],
             ]
         )
         choices = jax.random.choice(subkey, options, p=probs, shape=(batch_size,))
@@ -97,8 +97,8 @@ class CurriculumSchedulerZaremba2014(CurriculumSchedulerInterface):
                         jax.random.randint(
                             subkey,
                             (1,),
-                            self.config[CURRICULUM.OPTIONS.MIN],
-                            self.config[CURRICULUM.OPTIONS.MAX] + 1,
+                            self.config[CURRICULUM.CONFIGS.MIN],
+                            self.config[CURRICULUM.CONFIGS.MAX] + 1,
                         )[0]
                     )
                 )
@@ -108,7 +108,7 @@ class CurriculumSchedulerZaremba2014(CurriculumSchedulerInterface):
             self.prng, subkey = jax.random.split(self.prng)
             e = jax.random.geometric(subkey, 0.5)
             # force "e" to be an int and "D" + "e" to not exceed "max"
-            e = min(self.config[CURRICULUM.OPTIONS.MAX] - self.curriculum_level, int(e))
+            e = min(self.config[CURRICULUM.CONFIGS.MAX] - self.curriculum_level, int(e))
 
             # option 2: uniform in ["min", "D" + "e"]
             if choice == 2:
@@ -118,7 +118,7 @@ class CurriculumSchedulerZaremba2014(CurriculumSchedulerInterface):
                         jax.random.randint(
                             subkey,
                             (1,),
-                            self.config[CURRICULUM.OPTIONS.MIN],
+                            self.config[CURRICULUM.CONFIGS.MIN],
                             self.curriculum_level + e + 1,
                         )[0]
                     )
@@ -133,12 +133,12 @@ class CurriculumSchedulerZaremba2014(CurriculumSchedulerInterface):
 
 if __name__ == "__main__":
     config = {
-        CURRICULUM.OPTIONS.ACCURACY_THRESHOLD: 0.9,
-        CURRICULUM.OPTIONS.MIN: 1,
-        CURRICULUM.OPTIONS.MAX: 20,
-        CURRICULUM.OPTIONS.ZAREMBA2014.P1: 0.10,
-        CURRICULUM.OPTIONS.ZAREMBA2014.P2: 0.25,
-        CURRICULUM.OPTIONS.ZAREMBA2014.P3: 0.65,
+        CURRICULUM.CONFIGS.ACCURACY_THRESHOLD: 0.9,
+        CURRICULUM.CONFIGS.MIN: 1,
+        CURRICULUM.CONFIGS.MAX: 20,
+        CURRICULUM.CONFIGS.ZAREMBA2014.P1: 0.10,
+        CURRICULUM.CONFIGS.ZAREMBA2014.P2: 0.25,
+        CURRICULUM.CONFIGS.ZAREMBA2014.P3: 0.65,
     }
 
     batch_size = 16

@@ -1,6 +1,7 @@
 # custom directories
 Visualization_Outputs/
 wandb/
+Datasets/cache/
 
 # wp
 *.swp
