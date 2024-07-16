@@ -1,5 +1,6 @@
 import jax
 import jax.numpy as jnp
+import optax
 
 from Common.TrainingInterfaces import DataloaderInterface
 
@@ -68,6 +69,10 @@ class BinaryAdditionLoader(DataloaderInterface):
     def update_curriculum_level(self, curriculum_params: dict):
         self.curriculum_scheduler.update_curriculum_level(curriculum_params)
 
+    # TODO is this the right criterion to use?
+    def criterion(self, predictions, targets):
+        return jnp.mean(optax.losses.l2_loss(predictions, targets))
+
     def update_split(self, new_split: str):
         pass
 
@@ -130,7 +135,7 @@ class BinaryAdditionLoader(DataloaderInterface):
 
 
 if __name__ == "__main__":
-    from Common.globals import CURRICULUM, DATASETS
+    from Common.globals import CURRICULUM, DATASETS, METRICS
     from Training.Curriculum_zaremba2014 import CurriculumSchedulerZaremba2014
 
     curric_config = {
@@ -163,7 +168,7 @@ if __name__ == "__main__":
         assert len(target.shape) == 3
 
     curriculum_params = {
-        CURRICULUM.PARAMS.ACCURACY: 0.95,
+        METRICS.ACCURACY: 0.95,
     }
 
     add_loader.update_curriculum_level(curriculum_params)

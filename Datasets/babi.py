@@ -3,6 +3,7 @@ from typing import Any
 
 import jax
 import jax.numpy as jnp
+import optax
 
 from Common.globals import DATASETS
 from Common.TrainingInterfaces import DataEncoderInterface, DataloaderInterface
@@ -134,6 +135,10 @@ class BabiLoader(DataloaderInterface):
 
     def update_curriculum_level(self, curriculum_params: dict):
         self.curriculum_scheduler.update_curriculum_level(curriculum_params)
+
+    # TODO is this the right criterion to use?
+    def criterion(self, predictions, targets):
+        return jnp.mean(optax.losses.l2_loss(predictions, targets))
 
     def update_batch_params(
         self, batch_size: int | None = None, num_batches: int | None = None

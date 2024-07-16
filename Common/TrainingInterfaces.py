@@ -155,7 +155,7 @@ class DataloaderInterface(ABC):
     def update_curriculum_level(self, curriculum_params: dict):
         """Updates the curriculum level based on metrics.
 
-        :param curriculum_params: inputs influencing next curriculum level. Populated with keys from Common.globals.CURRICULUM.PARAMS
+        :param curriculum_params: inputs influencing next curriculum level. Populated with keys from Common.globals.METRICS
         """
         pass
 
@@ -232,7 +232,7 @@ class TrainingConfigInterface(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def val_step(self, data: Array) -> dict:
+    def val_step(self, data: Array, target: Array, criterion: Callable) -> dict:
         raise NotImplementedError
 
     @abstractmethod

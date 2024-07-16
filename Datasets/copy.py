@@ -98,7 +98,7 @@ class CopyLoader(DataloaderInterface):
 
 
 if __name__ == "__main__":
-    from Common.globals import CURRICULUM, DATASETS
+    from Common.globals import CURRICULUM, DATASETS, METRICS
     from Training.Curriculum_zaremba2014 import CurriculumSchedulerZaremba2014
 
     curric_config = {
@@ -129,7 +129,7 @@ if __name__ == "__main__":
         assert len(target.shape) == 3
 
     curriculum_params = {
-        CURRICULUM.PARAMS.ACCURACY: 0.95,
+        METRICS.ACCURACY: 0.95,
     }
 
     copy_loader.update_curriculum_level(curriculum_params)

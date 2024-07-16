@@ -3,7 +3,7 @@ import jax.numpy as jnp
 from jax import Array
 
 from Common import globals
-from Common.globals import CURRICULUM
+from Common.globals import CURRICULUM, METRICS
 from Common.TrainingInterfaces import CurriculumSchedulerInterface
 
 
@@ -38,11 +38,11 @@ class CurriculumSchedulerZaremba2014(CurriculumSchedulerInterface):
     def update_curriculum_level(self, curriculum_params: dict):
         check_accuracy = (
             CURRICULUM.CONFIGS.ACCURACY_THRESHOLD in self.config
-            and CURRICULUM.PARAMS.ACCURACY in curriculum_params
+            and METRICS.ACCURACY in curriculum_params
         )
         check_loss = (
             CURRICULUM.CONFIGS.LOSS_THRESHOLD in self.config
-            and CURRICULUM.PARAMS.LOSS in curriculum_params
+            and METRICS.LOSS in curriculum_params
         )
 
         assert (
@@ -53,13 +53,13 @@ class CurriculumSchedulerZaremba2014(CurriculumSchedulerInterface):
         increment_level = False
         if check_accuracy:
             if (
-                curriculum_params[CURRICULUM.PARAMS.ACCURACY]
+                curriculum_params[METRICS.ACCURACY]
                 > self.config[CURRICULUM.CONFIGS.ACCURACY_THRESHOLD]
             ):
                 increment_level = True
         if check_loss:
             if (
-                curriculum_params[CURRICULUM.PARAMS.LOSS]
+                curriculum_params[METRICS.LOSS]
                 < self.config[CURRICULUM.CONFIGS.LOSS_THRESHOLD]
             ):
                 increment_level = True
@@ -150,7 +150,7 @@ if __name__ == "__main__":
     assert next_curriculum.shape == (batch_size,)
 
     curriculum_params = {
-        CURRICULUM.PARAMS.ACCURACY: 0.95,
+        METRICS.ACCURACY: 0.95,
     }
 
     curric.update_curriculum_level(curriculum_params)

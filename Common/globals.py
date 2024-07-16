@@ -166,18 +166,13 @@ class CURRICULUM:
             P2 = "p2"
             P3 = "p3"
 
-    # inputs which influence the curriculum
-    class PARAMS:
-        PREVIOUS_LEVEL = "previous curriculum level"
-        LOSS = "loss"
-        ACCURACY = "accuracy"
-        EPOCH = "epoch"
-
 
 # Metrics
 class METRICS:
     LOSS = "loss"
     ACCURACY = "accuracy"
+    EPOCH = "epoch"
+    CURRICULUM_LEVEL = "curriculum_level"
 
 
 # WandB
