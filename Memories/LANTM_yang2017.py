@@ -19,8 +19,6 @@ class MemoryLocation:
 
 
 # Helper functions
-
-
 def read_from_weights(memory_state: list[MemoryLocation], weights: Array) -> Array:
     """Calculates the read vector
     :param memory_state: current memory state
@@ -63,8 +61,6 @@ def normalize_arith_mean_similarity(
 
 
 # Similarity functions
-
-
 def similarity_softmax(
     memory_state: list[MemoryLocation],
     head_state: Array,
@@ -120,8 +116,6 @@ def similarity_inverse_square(
 
 
 # Metric functions
-
-
 def metric_euclidean_distance(head_state: Array, key: Array) -> float:
     """Implements euclidean distance metric
     :param head_state: current head state vector
@@ -154,8 +148,6 @@ def interpolation_Rn_function(
 
 
 # Group action functions
-
-
 def group_action_Rn_addition(head_state: Array, action: Array) -> Array:
     """Implements Rn addition group
     :param head_state: previous head state vector
@@ -170,10 +162,9 @@ def group_action_Rn_addition(head_state: Array, action: Array) -> Array:
     return jnp.add(head_state, action)
 
 
-# TODO group action and metric for SO3 on S2
+# TODO group action, metric, interpolation functions for SO3 on S2
 
 
-# TODO add "random access" section 4.3 - add interpolation functions for respective spaces
 class Memory(MemoryInterface):
     """Memory interface for NTM from Yang 2017 (arXiv:1611.02854).
 
@@ -181,8 +172,10 @@ class Memory(MemoryInterface):
         1. Reading
             1.1 Receive the following inputs
                 1.1.1 previous head state "q_p" (the address of the previous read)
-                1.1.2 action "a" (the Lie group operation to update q)
-            1.2 Calculate the new head state "q" from q_p and a
+                1.1.2 interpolation vector "r"
+                1.1.3 interpolation gate "g" (scalar)
+                1.1.4 action "a" (the Lie group operation to update q)
+            1.2 Calculate the new head state "q" from q_p, r, g, and a
             1.3 Calculate the weights "w" between q and each memory location's key "k" using a defined similarity function "S"
             1.4 Return a weighted sum of memory vectors "v" (dot product of v and w)
 
@@ -191,10 +184,12 @@ class Memory(MemoryInterface):
         2. Writing
             2.1 Receive the following inputs
                 2.1.1 previous head state "q_p" (the address of the previous write)
-                2.1.2 action "a" (the Lie group operation to update q)
-                2.1.3 memory vector to write "v_w"
-                2.1.4 strength of new memory "s_w"
-            2.2 Calculate the new head state "q" from q_p and a
+                2.1.2 interpolation vector "r"
+                2.1.3 interpolation gate "g" (scalar)
+                2.1.4 action "a" (the Lie group operation to update q)
+                2.1.5 memory vector to write "v_w"
+                2.1.6 strength of new memory "s_w"
+            2.2 Calculate the new head state "q" from q_p, r, g, and a
             2.3 Add a new memory location to the memory state with (key, memory vector, strength) of (q, v_w, s_w)
 
 
@@ -207,6 +202,18 @@ class Memory(MemoryInterface):
 
     The memory is defined by:
         The memory depth "M" (length of memory vectors)
+
+        An interpolation function "I" which
+            Updates a head state "q" based on an interpolation vector "r" and interpolation gate "g"
+            This is for moving to an absolute address, rather than relative
+            r indicates the address, g indicates the magnitude of the move
+
+            Example:
+                R2 linear interpolation
+                    q = (x, y)
+                    r = (a, b)
+                    I(q, r, g) = q * (1 - g) + r * g
+
 
         A Lie group "L" which
             Operates in a space of dimension "D" (length of key vectors)
