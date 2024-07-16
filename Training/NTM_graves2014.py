@@ -51,16 +51,17 @@ class TrainingConfig(TrainingConfigInterface):
             model_config.memory_N,
             model_config.memory_M,
         )
-        self.MEMORY_WIDTH = (1, model_config.memory_N)
+        self.MEMORY_WIDTH = (model_config.memory_N,)
         self.model, self.model_state, self.memory_model = self._init_models()
 
-    def loss_fn(self, model_params, memory_weights, data, target, criterion):
+    def loss_fn(self, model_params, data, target, criterion):
         # batch the function
         def prediction_fn(
-            data, memory_weights, read_previous, write_previous, memory_model
+            data, memory_weights, read_previous, write_previous, read_data, memory_model
         ):
+            data = jnp.concat((data, read_data), axis=-1)
             (
-                (data, read_data, memory_weights, read_previous, write_previous),
+                (output, read_data, memory_weights, read_previous, write_previous),
                 variables,
             ) = self.model_state.apply_fn(
                 {globals.JAX.PARAMS: model_params},
@@ -71,35 +72,54 @@ class TrainingConfig(TrainingConfigInterface):
                 memory_model,
                 mutable=["state"],
             )
-            return data, read_data, memory_weights, read_previous, write_previous
+            return output, read_data, memory_weights, read_previous, write_previous
 
-        batched_prediction_fn = jax.vmap(
-            prediction_fn, in_axes=(0, None, None, None, None)
-        )
+        batched_prediction_fn = jax.vmap(prediction_fn, in_axes=(0, 0, 0, 0, 0, None))
+
+        # initial values
+        read_previous = jnp.zeros((data.shape[0],) + self.MEMORY_WIDTH).at[:, 0].set(1)
+        write_previous = jnp.zeros((data.shape[0],) + self.MEMORY_WIDTH).at[:, 0].set(1)
+        read_data = jnp.zeros((data.shape[0], self.model_config.memory_M))
+        memory_weights = jnp.zeros((data.shape[0],) + self.MEMORY_SHAPE)
 
         # processing loop
-        read_previous = jnp.ones(self.MEMORY_WIDTH)
-        write_previous = jnp.ones(self.MEMORY_WIDTH)
-        for _ in range(self.model_config.input_length):
-            data, read_data, memory_weights, read_previous, write_previous = (
+        for sequence in range(data.shape[1]):
+            output, read_data, memory_weights, read_previous, write_previous = (
                 batched_prediction_fn(
-                    data,
+                    data[:, sequence],
                     memory_weights,
                     read_previous,
                     write_previous,
+                    read_data,
                     self.memory_model,
                 )
             )
-            data = jnp.concat((data, read_data), axis=-1)
 
-        return criterion(data[:, :, :12], target), ("placeholder",)
+        output = jnp.empty_like(target)
+        for sequence in range(target.shape[1]):
+            (
+                sequence_output,
+                read_data,
+                memory_weights,
+                read_previous,
+                write_previous,
+            ) = batched_prediction_fn(
+                jnp.zeros_like(data[:, 0]),
+                memory_weights,
+                read_previous,
+                write_previous,
+                read_data,
+                self.memory_model,
+            )
+            output = output.at[:, sequence].set(sequence_output)
+
+        return criterion(output, target), ("placeholder",)
 
     def train_step(self, data, target, criterion):
-        gradient_fn = jax.value_and_grad(self.loss_fn, argnums=(0, 1), has_aux=True)
-        ((loss, (metric,)), (model_grads, memory_grads)) = gradient_fn(
-            self.model_state.params, self.memory_model.weights, data, target, criterion
+        gradient_fn = jax.value_and_grad(self.loss_fn, argnums=(0), has_aux=True)
+        ((loss, (metric,)), model_grads) = gradient_fn(
+            self.model_state.params, data, target, criterion
         )
-        self.memory_model.apply_gradients(memory_grads)
         self.model_state = self.model_state.apply_gradients(grads=model_grads)
         return {globals.METRICS.LOSS: loss}
 
@@ -113,11 +133,7 @@ class TrainingConfig(TrainingConfigInterface):
         key1, key2, key3 = jax.random.split(rng_key, num=3)
 
         # init memory
-        memory_model = self.model_config.memory_class(
-            key1,
-            (1, *self.MEMORY_SHAPE),
-            self.model_config.optimizer(self.model_config.learning_rate),
-        )
+        memory_model = self.model_config.memory_class()
 
         # init read and write heads
         read_head = self.model_config.read_head_class(*self.MEMORY_SHAPE)
@@ -133,15 +149,13 @@ class TrainingConfig(TrainingConfigInterface):
             write_head,
         )
         init_input = jnp.ones(
-            (
-                self.model_config.input_length,
-                self.model_config.input_features,
-            )
+            (self.model_config.input_features + self.model_config.memory_M)
         )
+        memory_weights = jnp.ones(self.MEMORY_SHAPE)
         params = model.init(
             key3,
             init_input,
-            memory_model.weights,
+            memory_weights,
             jnp.ones(self.MEMORY_WIDTH),
             jnp.ones(self.MEMORY_WIDTH),
             memory_model,

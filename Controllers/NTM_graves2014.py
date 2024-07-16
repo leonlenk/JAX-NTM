@@ -2,7 +2,6 @@ from typing import List, Tuple
 
 import jax
 import jax.numpy as jnp
-import optax
 from flax import linen as nn
 
 from Common import globals
@@ -65,7 +64,6 @@ class NTMReadController(NTMControllerTemplate):
         # Corresponding to k, β, g, s, γ sizes from the paper
         self.read_lengths = (self.M_dim_memory, 1, 1, 3, 1)
 
-    @jax.jit
     def is_read_controller(self) -> bool:
         return True
 
@@ -75,7 +73,7 @@ class NTMReadController(NTMControllerTemplate):
         """NTMReadController forward function.
 
         :param embeddings: input representation of the model.
-        :param w_prev: [1xm] previous step state
+        :param w_prev: [m] previous step state
         """
         memory_addresses = nn.Dense(
             sum(self.read_lengths),
@@ -111,7 +109,6 @@ class NTMWriteController(NTMControllerTemplate):
             self.M_dim_memory,
         )
 
-    @jax.jit
     def is_read_controller(self) -> bool:
         return False
 
@@ -127,7 +124,7 @@ class NTMWriteController(NTMControllerTemplate):
         """NTMWriteController forward function.
 
         :param embeddings: input representation of the model.
-        :param w_prev: [1xm] previous step state
+        :param w_prev: [m] previous step state
         """
         memory_components = nn.Dense(
             sum(self.write_lengths),
@@ -165,11 +162,7 @@ if __name__ == "__main__":
     test_model_feature_size = 10
     learning_rate = 5e-3
 
-    memory_model = Memory(
-        jax.random.key(globals.JAX.RANDOM_SEED),
-        (1, test_n, test_m),
-        optax.adam(learning_rate),
-    )
+    memory_model = Memory()
     read_controller = NTMReadController(test_n, test_m)
     write_controller = NTMWriteController(test_n, test_m)
 
@@ -178,21 +171,22 @@ if __name__ == "__main__":
 
     read_controller_variables = read_controller.init(
         key1,
-        jnp.ones((1, test_model_feature_size)),
-        jnp.ones((1, test_n)),
+        jnp.ones((test_model_feature_size,)),
+        jnp.ones((test_n,)),
         memory_model.weights,
         memory_model,
     )
     print("Initialized read controller")
     write_controller_variables = write_controller.init(
         key2,
-        jnp.ones((1, test_model_feature_size)),
-        jnp.ones((1, test_n)),
+        jnp.ones((test_model_feature_size,)),
+        jnp.ones((test_n,)),
         memory_model.weights,
         memory_model,
     )
     print("Initialized write controller")
 
+    print(read_controller.is_read_controller())
     assert read_controller.is_read_controller()
     assert not write_controller.is_read_controller()
 

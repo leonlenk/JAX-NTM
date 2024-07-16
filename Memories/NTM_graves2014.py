@@ -14,38 +14,18 @@ class Memory(MemoryInterface):
     N = size of vector at each memory location
     """
 
-    def __init__(
-        self,
-        rng_key,
-        memory_shape,
-        optimizer,
-    ):
-        self.rng_key = rng_key
-
-        self.weights = jax.random.uniform(
-            self.rng_key,
-            memory_shape,  # , minval=0, maxval=0.01
-        )
-
-        self.optimizer = optimizer
-        self.optimizer_state = self.optimizer.init(self.weights)
-
-    def apply_gradients(self, gradients):
-        updates, self.optimizer_state = self.optimizer.update(
-            gradients, self.optimizer_state
-        )
-        self.weights = jnp.asarray(optax.apply_updates(self.weights, updates))
-
     def read(self, memory_weights, read_weights):
         """arXiv:1410.5401 section 3.1"""
-        return jnp.matmul(read_weights, memory_weights).squeeze(0)
+        return jnp.matmul(read_weights, memory_weights)
 
     def write(self, memory_weights, write_weights, erase_vector, add_vector):
         """arXiv:1410.5401 section 3.2"""
 
         # calculate erase and add vectors
-        write_weights = jnp.expand_dims(write_weights.squeeze(0), axis=1)
+        write_weights = jnp.expand_dims(write_weights, axis=1)
+        erase_vector = jnp.expand_dims(erase_vector, axis=0)
         erase = jnp.matmul(write_weights, erase_vector)
+        add_vector = jnp.expand_dims(add_vector, axis=0)
         add = jnp.matmul(write_weights, add_vector)
         # update memory
         memory_weights = jnp.multiply(memory_weights, 1 - erase)
@@ -94,9 +74,7 @@ class Memory(MemoryInterface):
 
     def _shift(self, gated_weighting, shift_weighting):
         """arXiv:1410.5401 equation 8"""
-        return circular_convolution_1d(
-            gated_weighting.squeeze(), shift_weighting.squeeze()
-        )
+        return circular_convolution_1d(gated_weighting, shift_weighting)
 
     def _sharpen(self, weights, sharpen_scalar):
         """arXiv:1410.5401 equation 9"""
@@ -120,11 +98,7 @@ if __name__ == "__main__":
     test_n = 10
     test_m = 4
     learning_rate = 5e-3
-    memory = Memory(
-        jax.random.key(globals.JAX.RANDOM_SEED),
-        (1, test_n, test_m),
-        optax.adam(learning_rate),
-    )
+    memory = Memory()
 
     read_weights = jnp.divide(jnp.ones(test_n), test_n)
 
@@ -133,13 +107,14 @@ if __name__ == "__main__":
 
     read_output = memory.read(memory.weights, read_weights)
     # print(f'read output: {read_output}')
-    expected_read = jnp.average(memory.weights, axis=1).squeeze(0)
+    expected_read = jnp.average(memory.weights, axis=0)
+
     assert (
         jnp.sum(jnp.abs(jnp.subtract(read_output, expected_read))) < test_m * 1e-5
     ), "Memory read function did not return expected vector"
     print("Memory read works as expected with a uniform vector")
 
-    write_weights = jnp.expand_dims(jnp.divide(jnp.ones(test_n), test_n), axis=0)
+    write_weights = jnp.divide(jnp.ones(test_n), test_n)
     erase_vector = jnp.expand_dims(jnp.multiply(jnp.ones(test_m), test_n), axis=0)
     add_vector = jnp.expand_dims(jnp.multiply(jnp.ones(test_m), test_n), axis=0)
     write_output = memory.write(
@@ -150,7 +125,7 @@ if __name__ == "__main__":
     )
     # print(write_output)
 
-    expected_write = jnp.ones((1, test_n, test_m))
+    expected_write = jnp.ones((test_n, test_m))
     assert (
         jnp.sum(jnp.abs(jnp.subtract(write_output, expected_write)))
         < test_m * test_n * 1e-5

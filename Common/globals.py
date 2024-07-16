@@ -1,3 +1,5 @@
+import traceback
+
 """
 Global definitions of hard coded variables.
 """
@@ -123,3 +125,12 @@ class WANDB:
         TRAIN = "train"
         VAL = "val"
         TEST = "test"
+
+
+def print_items(**kwargs):
+    def func(var):
+        stack = traceback.extract_stack()
+        filename, lineno, function_name, code = stack[-2]
+
+    for item in kwargs.items():
+        print(f"{item[0]} = {item[1]}")

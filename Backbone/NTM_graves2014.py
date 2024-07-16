@@ -76,18 +76,19 @@ if __name__ == "__main__":
 
     key1, key2, key3 = jax.random.split(jax.random.key(globals.JAX.RANDOM_SEED), num=3)
 
-    memory_model = Memory(key1, (1, memory_n, memory_m), optax.adam(lr))
+    memory_model = Memory()
     read_head = NTMReadController(memory_n, memory_m)
     write_head = NTMWriteController(memory_n, memory_m)
 
     model = LSTMModel(key3, memory_m, layers, num_outputs, read_head, write_head)
-    init_input = jnp.ones((input_length, input_features))
+    init_input = jnp.ones((input_features,))
+    memory_weights = jnp.zeros((memory_n, memory_m))
     params = model.init(
         key2,
         init_input,
-        memory_model.weights,
-        jnp.ones((1, memory_n)),
-        jnp.ones((1, memory_n)),
+        memory_weights,
+        jnp.ones((memory_n,)),
+        jnp.ones((memory_n,)),
         memory_model,
     )
     model_state = train_state.TrainState.create(
@@ -97,9 +98,9 @@ if __name__ == "__main__":
     )
 
     def loss_fn(model_params, memory_weights):
-        sample_batch = jnp.ones((input_length, input_features))
-        read_previous = jnp.ones((1, memory_n))
-        write_previous = jnp.ones((1, memory_n))
+        sample_batch = jnp.ones((input_features,))
+        read_previous = jnp.ones((memory_n,))
+        write_previous = jnp.ones((memory_n,))
         for _ in range(num_recursions):
             (
                 (
@@ -119,7 +120,7 @@ if __name__ == "__main__":
                 memory_model,
                 mutable=["state"],
             )
-            sample_batch = jnp.concat((sample_batch, read_data), axis=1)
+            sample_batch = jnp.concat((sample_batch, read_data), axis=-1)
 
         return jnp.sum(sample_batch)
 

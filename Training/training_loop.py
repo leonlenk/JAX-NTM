@@ -116,7 +116,7 @@ if __name__ == "__main__":
     MEMORY_DEPTH = 12
 
     model_config = ModelConfig(
-        learning_rate=1e-4,
+        learning_rate=1e-3,
         optimizer=optax.adam,
         memory_class=Memory,
         backbone_class=LSTMModel,
@@ -124,8 +124,8 @@ if __name__ == "__main__":
         write_head_class=NTMWriteController,
         memory_M=MEMORY_DEPTH,
         memory_N=8,
-        num_layers=4,
-        num_outputs=12 - 8,
+        num_layers=3,
+        num_outputs=12,
         input_length=1,
         input_features=12,
     )
@@ -134,7 +134,7 @@ if __name__ == "__main__":
     curriculum_config = {
         CURRICULUM.OPTIONS.ACCURACY_THRESHOLD: 0.9,
         CURRICULUM.OPTIONS.MIN: 1,
-        CURRICULUM.OPTIONS.MAX: 1,
+        CURRICULUM.OPTIONS.MAX: 10,
         CURRICULUM.OPTIONS.ZAREMBA2014.P1: 0.10,
         CURRICULUM.OPTIONS.ZAREMBA2014.P2: 0.25,
         CURRICULUM.OPTIONS.ZAREMBA2014.P3: 0.65,
@@ -142,7 +142,7 @@ if __name__ == "__main__":
     curric = CurriculumSchedulerZaremba2014(curriculum_config)
     dataset = CopyLoader(
         batch_size=32,
-        num_batches=1,
+        num_batches=10,
         memory_depth=MEMORY_DEPTH,
         curriculum_scheduler=curric,
     )

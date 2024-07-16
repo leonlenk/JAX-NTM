@@ -58,7 +58,7 @@ class CopyLoader(DataloaderInterface):
         self.curriculum_scheduler.update_curriculum_level(curriculum_params)
 
     def criterion(self, predictions, targets):
-        return jnp.sum(optax.losses.l2_loss(predictions, targets))
+        return jnp.mean(optax.losses.l2_loss(predictions, targets))
 
     def __next__(self):
         if self.iterations >= self.num_batches:
@@ -75,7 +75,7 @@ class CopyLoader(DataloaderInterface):
             (self.batch_size, int(jnp.max(curriculum)), self.memory_depth),
             0,
             2,
-        )
+        ).astype(float)
 
         # zero out the last memory depth
         data = data.at[:, :, -1].set(0)
