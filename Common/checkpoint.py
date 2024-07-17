@@ -245,11 +245,12 @@ if __name__ == "__main__":
     train(
         project_name=globals.WANDB.PROJECTS.CODE_TESTING,
         training_config=training_config,
+        training_metadata=training_metadata,
         num_epochs=2,
         train_dataset=dataset,
         wandb_tags=[globals.WANDB.TAGS.CODE_TESTING],
         checkpoint_wrapper=checkpoint_wrapper,
-        training_metadata=training_metadata,
+        # use_wandb=True,
     )
 
     restored_state = checkpoint_wrapper.load_checkpoint(

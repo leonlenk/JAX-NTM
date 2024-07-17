@@ -23,13 +23,13 @@ def average_metric(metrics: list[dict]) -> dict:
 def train(
     project_name: str,
     training_config: TrainingConfigInterface,
+    training_metadata: TrainingMetadata,
     num_epochs: int,
     train_dataset: DataloaderInterface,
     val_period: int = 1,
     val_dataset: DataloaderInterface | None = None,
     metric_aggregator: Callable[[list[dict]], dict] = average_metric,
     checkpoint_wrapper: CheckpointWrapper | None = None,
-    training_metadata: TrainingMetadata | None = None,
     current_epoch: int = 1,
     use_wandb: bool = False,
     wandb_tags: list[str] = [],
@@ -38,9 +38,7 @@ def train(
     if use_wandb:
         wandb_config = {
             globals.CONFIG.EPOCHS: num_epochs,
-            globals.CONFIG.LEARNING_RATE: training_config.model_config.learning_rate,
-            globals.MACHINES.GRAVES2014.MEMORY.N: training_config.model_config.memory_N,
-            globals.MACHINES.GRAVES2014.MEMORY.M: training_config.model_config.memory_M,
+            globals.CHECKPOINTS.METADATA: training_metadata.get_metadata(),
         }
 
         wandb.init(
@@ -113,9 +111,6 @@ def train(
 
         # TODO add metrics to checkpointer to save best model
         if checkpoint_wrapper is not None:
-            assert (
-                training_metadata is not None
-            ), "Training metadata required for saving checkpoints"
             checkpoint_wrapper.save_checkpoint(
                 training_config.model_state, epoch, training_metadata.get_metadata()
             )
