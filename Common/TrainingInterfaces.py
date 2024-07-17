@@ -1,5 +1,6 @@
 import os
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from typing import Any, Callable
 
 import jax
@@ -210,15 +211,12 @@ class CurriculumSchedulerStub(CurriculumSchedulerInterface):
         return jnp.ones((batch_size,))
 
 
+@dataclass
 class ModelConfigInterface(ABC):
     learning_rate: float
     optimizer: Callable
     memory_M: int
     memory_N: int
-
-    @abstractmethod
-    def __init__(self) -> None:
-        raise NotImplementedError
 
 
 class TrainingConfigInterface(ABC):

@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from functools import partial
 from typing import Callable, Type
 
@@ -13,30 +14,18 @@ from Common.MemoryInterface import MemoryInterface
 from Common.TrainingInterfaces import ModelConfigInterface, TrainingConfigInterface
 
 
+@dataclass
 class ModelConfig(ModelConfigInterface):
-    def __init__(
-        self,
-        learning_rate: float,
-        optimizer: Callable,
-        memory_class: Type[MemoryInterface],
-        backbone_class: Type[BackboneInterface],
-        read_head_class: Type[ControllerInterface],
-        write_head_class: Type[ControllerInterface],
-        memory_M: int,
-        memory_N: int,
-        num_layers: int,
-        input_features: int,
-    ) -> None:
-        self.learning_rate = learning_rate
-        self.optimizer = optimizer
-        self.memory_class = memory_class
-        self.backbone_class = backbone_class
-        self.read_head_class = read_head_class
-        self.write_head_class = write_head_class
-        self.memory_M = memory_M
-        self.memory_N = memory_N
-        self.num_layers = num_layers
-        self.input_features = input_features
+    learning_rate: float
+    optimizer: Callable
+    memory_class: Type[MemoryInterface]
+    backbone_class: Type[BackboneInterface]
+    read_head_class: Type[ControllerInterface]
+    write_head_class: Type[ControllerInterface]
+    memory_M: int
+    memory_N: int
+    num_layers: int
+    input_features: int
 
 
 class TrainingConfig(TrainingConfigInterface):
