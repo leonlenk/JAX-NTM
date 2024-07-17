@@ -7,7 +7,7 @@ from Common import globals
 from Common.MemoryInterface import MemoryInterface
 
 
-class Memory(MemoryInterface):
+class NTMMemory(MemoryInterface):
     """Memory interface for NTM from Graves 2014 (arXiv:1410.5401).
     Memory has a size of: N x M.
     N = number of memory locations
@@ -98,7 +98,7 @@ if __name__ == "__main__":
     test_n = 10
     test_m = 4
     learning_rate = 5e-3
-    memory = Memory()
+    memory = NTMMemory()
     weights = jnp.zeros((test_n, test_m))
 
     read_weights = jnp.divide(jnp.ones(test_n), test_n)

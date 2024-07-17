@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 from flax import linen as nn
 from jax import Array
 
+from Common.globals import METADATA
 from Common.MemoryInterface import MemoryInterface
 
 
@@ -41,3 +42,8 @@ class ControllerInterface(ABC, nn.Module):
         memory_model: MemoryInterface,
     ) -> tuple[Array, Array]:
         raise NotImplementedError
+
+    def get_metadata(self) -> dict:
+        return {
+            METADATA.NAME: self.__class__.__name__,
+        }

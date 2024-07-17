@@ -6,6 +6,7 @@ from jax import Array
 from Common import globals
 from Common.BackboneInterface import BackboneInterface
 from Common.ControllerInterface import ControllerInterface
+from Common.globals import METADATA, MODELS
 
 
 class LSTMModel(BackboneInterface):
@@ -55,6 +56,15 @@ class LSTMModel(BackboneInterface):
 
         return (output, read_data, memory_weights, read_locations, write_locations)
 
+    def get_metadata(self) -> dict:
+        return {
+            METADATA.NAME: self.__class__.__name__,
+            MODELS.LSTM.FEATURES: self.features,
+            MODELS.LSTM.LAYERS: self.layers,
+            MODELS.LSTM.NUM_OUTPUTS: self.num_outputs,
+            # TODO accept a seed and convert it into a prng_key so we can add METADATA.SEED
+        }
+
 
 # basic test cases
 if __name__ == "__main__":
@@ -63,7 +73,7 @@ if __name__ == "__main__":
     from jax.tree_util import tree_flatten
 
     from Controllers.NTM_graves2014 import NTMReadController, NTMWriteController
-    from Memories.NTM_graves2014 import Memory
+    from Memories.NTM_graves2014 import NTMMemory
 
     layers = 4
     batch_size = 8
@@ -77,7 +87,7 @@ if __name__ == "__main__":
 
     key1, key2, key3 = jax.random.split(jax.random.key(globals.JAX.RANDOM_SEED), num=3)
 
-    memory_model = Memory()
+    memory_model = NTMMemory()
     read_head = NTMReadController(memory_n, memory_m)
     write_head = NTMWriteController(memory_n, memory_m)
 

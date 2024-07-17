@@ -10,11 +10,13 @@ from jax import Array
 
 from Common import globals
 from Common.BackboneInterface import BackboneInterface
-from Common.globals import DATASETS
+from Common.globals import CONFIG, DATASETS, METADATA
 from Common.MemoryInterface import MemoryInterface
 
 
 class DataEncoderInterface(ABC):
+    memory_depth: int
+
     @abstractmethod
     def __init__(self, memory_depth: int):
         """Initializes the encoder.
@@ -56,8 +58,16 @@ class DataEncoderInterface(ABC):
         """
         pass
 
+    def get_metadata(self) -> dict:
+        return {
+            METADATA.NAME: self.__class__.__name__,
+            METADATA.MEMORY_DEPTH: self.memory_depth,
+        }
+
 
 class CurriculumSchedulerInterface(ABC):
+    config: dict = {}
+
     @abstractmethod
     def __init__(self, config: dict = {}):
         """Initializes the curriculum scheduler.
@@ -82,8 +92,20 @@ class CurriculumSchedulerInterface(ABC):
         """
         pass
 
+    def get_metadata(self) -> dict:
+        return {
+            METADATA.NAME: self.__class__.__name__,
+            METADATA.CONFIG: self.config,
+        }
+
 
 class DataloaderInterface(ABC):
+    batch_size: int
+    num_batches: int
+    memory_depth: int
+    seed: int = globals.JAX.RANDOM_SEED
+    config: dict = {}
+
     def __init__(
         self,
         batch_size: int,
@@ -181,35 +203,14 @@ class DataloaderInterface(ABC):
         """Gets (or creates) the next batch in the dataset."""
         raise NotImplementedError
 
-
-class DataEncoderStub(DataEncoderInterface):
-    def __init__(self, memory_depth: int):
-        pass
-
-    def initialize(self, config: dict = {}):
-        pass
-
-    def save(self):
-        pass
-
-    def encode(self, data: Any) -> Array:
-        return jnp.array([])
-
-    def decode(self, memory: Array) -> Any:
-        return None
-
-
-class CurriculumSchedulerStub(CurriculumSchedulerInterface):
-    """Stub CurriculumScheduler which always returns difficulties of 1"""
-
-    def __init__(self, config: dict = {}):
-        self.config = config
-
-    def update_curriculum_level(self, curriculum_params: dict):
-        pass
-
-    def get_curriculum(self, batch_size: int) -> Array:
-        return jnp.ones((batch_size,))
+    def get_metadata(self) -> dict:
+        return {
+            METADATA.NAME: self.__class__.__name__,
+            CONFIG.BATCH_SIZE: self.batch_size,
+            CONFIG.NUM_BATCHES: self.num_batches,
+            METADATA.MEMORY_DEPTH: self.memory_depth,
+            METADATA.SEED: self.seed,
+        }
 
 
 @dataclass
@@ -241,3 +242,43 @@ class TrainingConfigInterface(ABC):
     @abstractmethod
     def _init_models(self) -> tuple[BackboneInterface, TrainState, MemoryInterface]:
         raise NotImplementedError
+
+    def get_metadata(self) -> dict:
+        return {
+            METADATA.NAME: self.__class__.__name__,
+            CONFIG.LEARNING_RATE: self.model_config.learning_rate,
+            CONFIG.OPTIMIZER: self.model_config.optimizer.__name__,
+            METADATA.MEMORY_DEPTH: self.model_config.memory_M,
+            METADATA.MEMORY_LENGTH: self.model_config.memory_N,
+        }
+
+
+class DataEncoderStub(DataEncoderInterface):
+    def __init__(self, memory_depth: int):
+        self.memory_depth = memory_depth
+        pass
+
+    def initialize(self, config: dict = {}):
+        pass
+
+    def save(self):
+        pass
+
+    def encode(self, data: Any) -> Array:
+        return jnp.array([])
+
+    def decode(self, memory: Array) -> Any:
+        return None
+
+
+class CurriculumSchedulerStub(CurriculumSchedulerInterface):
+    """Stub CurriculumScheduler which always returns difficulties of 1"""
+
+    def __init__(self, config: dict = {}):
+        self.config = config
+
+    def update_curriculum_level(self, curriculum_params: dict):
+        pass
+
+    def get_curriculum(self, batch_size: int) -> Array:
+        return jnp.ones((batch_size,))

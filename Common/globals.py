@@ -8,14 +8,44 @@ Global definitions of hard coded variables.
 # JAX related variables
 class JAX:
     PARAMS = "params"
-    STATE = "state"
-    METADATA = "metadata"
 
     RANDOM_SEED = 137
     EPSILON = 1e-6
 
-    class CHECKPOINTS:
-        DIR = "Checkpoints"
+
+class CHECKPOINTS:
+    DIR = "Checkpoints"
+    STATE = "state"
+    METADATA = "metadata"
+
+
+class METADATA:
+    NAME = "name"
+    SEED = "seed"
+    CONFIG = "config"
+    MEMORY_DEPTH = "memory_depth"
+    MEMORY_LENGTH = "memory_length"
+
+    # TODO add other components
+    class COMPONENTS:
+        BACKBONE = "backbone"
+        CONTROLLER = "controller"
+
+        class CONTROLLERS:
+            READ = "read"
+            WRITE = "write"
+
+        MEMORY = "memory"
+        DATA_ENCODER = "data_encoder"
+        CURRICULUM_SCHEDULER = "curriculum_scheduler"
+        DATALOADER = "dataloader"
+
+        class DATALOADERS:
+            TRAIN = "train"
+            VAL = "val"
+            TEST = "test"
+
+        TRAINING_CONFIG = "training_config"
 
 
 # Machine Specific Variables
@@ -32,6 +62,10 @@ class MACHINES:
 
     class YANG2014:
         NAME = "LANTM yang 2014"
+        GROUP_ACTION = "group_action"
+        METRIC = "metric"
+        INTERPOLATION = "interpolation"
+        SIMILARITY = "similarity"
 
 
 # Visualization
@@ -52,6 +86,7 @@ class CONFIG:
     EPOCHS = "epochs"
     LEARNING_RATE = "learning_rate"
     BATCH_SIZE = "batch_size"
+    NUM_BATCHES = "number_of_batches"
     OPTIMIZER = "optimizer"
     OPTIMIZER_ADAM = "adam"
     VAL_PERIOD = "validation_period_in_epochs"
@@ -64,6 +99,11 @@ class MODELS:
     MACHINE = "machine"
     BASE = "base_model"
     OPTIMIZER = "optimizer"
+
+    class LSTM:
+        FEATURES = "features"
+        LAYERS = "layers"
+        NUM_OUTPUTS = "num_outputs"
 
 
 # Datasets
@@ -205,6 +245,7 @@ class WANDB:
         TEST = "test"
 
 
+# TODO clean this up...
 def print_items(**kwargs):
     def func(var):
         stack = traceback.extract_stack()
@@ -212,3 +253,9 @@ def print_items(**kwargs):
 
     for item in kwargs.items():
         print(f"{item[0]} = {item[1]}")
+
+
+def print_json(data):
+    import json
+
+    print(json.dumps(data, indent=4))

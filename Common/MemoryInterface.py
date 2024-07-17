@@ -6,7 +6,7 @@ import jax.numpy as jnp
 from flax import linen as nn
 from jax import Array
 
-from Common import globals
+from Common.globals import METADATA, VISUALIZATION
 from Visualization import memory_visualization
 
 
@@ -38,6 +38,11 @@ class MemoryInterface(ABC, nn.Module):
     ) -> Array:
         raise NotImplementedError
 
+    def get_metadata(self) -> dict:
+        return {
+            METADATA.NAME: self.__class__.__name__,
+        }
+
 
 # TODO options for:
 # save location for plots?
@@ -62,12 +67,10 @@ class MemoryVisualizerWrapper(MemoryInterface):
         self.save_dir: Path = Path(save_dir) if save_dir else Path("")
 
         if not self.save_dir.is_absolute():
-            self.save_dir = Path(globals.VISUALIZATION.OUTPUT_DIR) / self.save_dir
+            self.save_dir = Path(VISUALIZATION.OUTPUT_DIR) / self.save_dir
             self.save_dir = self.save_dir.resolve()
 
-        self.save_name: str = (
-            save_name if save_name else globals.VISUALIZATION.NAMES.DEFAULT
-        )
+        self.save_name: str = save_name if save_name else VISUALIZATION.NAMES.DEFAULT
 
         if delete_existing:
             if self.save_dir.is_dir():
@@ -77,7 +80,7 @@ class MemoryVisualizerWrapper(MemoryInterface):
         memory_visualization.plot_memory_state(
             memory_weights.squeeze(0).transpose(),
             read_weights.squeeze(0),
-            save_location=self.get_save_path(globals.VISUALIZATION.NAMES.READ),
+            save_location=self.get_save_path(VISUALIZATION.NAMES.READ),
             annotation="Read Attention",
         )
 
@@ -88,7 +91,7 @@ class MemoryVisualizerWrapper(MemoryInterface):
         memory_visualization.plot_memory_state(
             memory_weights.squeeze(0).transpose(),
             write_weights.squeeze(0),
-            save_location=self.get_save_path(globals.VISUALIZATION.NAMES.WRITE),
+            save_location=self.get_save_path(VISUALIZATION.NAMES.WRITE),
             annotation="Write Attention",
         )
 
@@ -99,7 +102,7 @@ class MemoryVisualizerWrapper(MemoryInterface):
         memory_visualization.plot_memory_state_comparison(
             memory_weights.squeeze(0).transpose(),
             write_output.squeeze(0).transpose(),
-            save_location=self.get_save_path(globals.VISUALIZATION.NAMES.WRITE),
+            save_location=self.get_save_path(VISUALIZATION.NAMES.WRITE),
             annotation=["before write", "after write"],
         )
 
@@ -128,7 +131,7 @@ class MemoryVisualizerWrapper(MemoryInterface):
         memory_visualization.plot_memory_state(
             memory_weights.squeeze(0).transpose(),
             address_output.squeeze(0),
-            save_location=self.get_save_path(globals.VISUALIZATION.NAMES.ADDRESS),
+            save_location=self.get_save_path(VISUALIZATION.NAMES.ADDRESS),
         )
 
         return address_output
@@ -139,7 +142,7 @@ class MemoryVisualizerWrapper(MemoryInterface):
 
         max_counter = 10**leading_zeros
         while counter < max_counter:
-            test_path = f"{base_path}_{str(counter).zfill(leading_zeros)}{globals.VISUALIZATION.IMG_EXTENSION}"
+            test_path = f"{base_path}_{str(counter).zfill(leading_zeros)}{VISUALIZATION.IMG_EXTENSION}"
             if not Path.is_file(Path(test_path)):
                 break
             counter += 1

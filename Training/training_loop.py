@@ -5,6 +5,7 @@ from tqdm import tqdm
 
 import wandb
 from Common import globals
+from Common.Checkpoint import CheckpointWrapper, TrainingMetadata
 from Common.TrainingInterfaces import DataloaderInterface, TrainingConfigInterface
 
 
@@ -27,6 +28,9 @@ def train(
     val_period: int = 1,
     val_dataset: DataloaderInterface | None = None,
     metric_aggregator: Callable[[list[dict]], dict] = average_metric,
+    checkpoint_wrapper: CheckpointWrapper | None = None,
+    training_metadata: TrainingMetadata | None = None,
+    current_epoch: int = 1,
     use_wandb: bool = False,
     wandb_tags: list[str] = [],
     wandb_run_name: str | None = None,
@@ -47,7 +51,7 @@ def train(
             tags=wandb_tags,
         )
 
-    for epoch in range(1, num_epochs + 1):
+    for epoch in range(current_epoch, num_epochs + 1):
         # train the model on each batch
         train_metrics: list[dict] = []
         with tqdm(train_dataset) as pbar:
@@ -107,4 +111,11 @@ def train(
             else:
                 train_dataset.update_curriculum_level(train_metric)
 
-        # TODO save best model based on validation results
+        # TODO add metrics to checkpointer to save best model
+        if checkpoint_wrapper is not None:
+            assert (
+                training_metadata is not None
+            ), "Training metadata required for saving checkpoints"
+            checkpoint_wrapper.save_checkpoint(
+                training_config.model_state, epoch, training_metadata.get_metadata()
+            )

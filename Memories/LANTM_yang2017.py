@@ -4,6 +4,7 @@ import jax.numpy as jnp
 from jax import Array
 
 from Common import globals
+from Common.globals import MACHINES, METADATA
 from Common.MemoryInterface import MemoryInterface
 
 
@@ -165,7 +166,7 @@ def group_action_Rn_addition(head_state: Array, action: Array) -> Array:
 # TODO group action, metric, interpolation functions for SO3 on S2
 
 
-class Memory(MemoryInterface):
+class LieAccessMemory(MemoryInterface):
     """Memory interface for NTM from Yang 2017 (arXiv:1611.02854).
 
     The memory operates as follows
@@ -283,6 +284,11 @@ class Memory(MemoryInterface):
         self.interpolation_fn = interpolation_fn
         self.similarity_fn = similarity_fn
 
+        self.group_action_fn_name = group_action_fn.__name__
+        self.metric_fn_name = metric_fn.__name__
+        self.interpolation_fn_name = interpolation_fn.__name__
+        self.similarity_fn_name = similarity_fn.__name__
+
     def apply_gradients(self, gradients):
         pass
 
@@ -311,6 +317,15 @@ class Memory(MemoryInterface):
             self.memory_state, head_state, self.metric_fn, *args
         )
 
+    def get_metadata(self) -> dict:
+        return {
+            METADATA.NAME: self.__class__.__name__,
+            MACHINES.YANG2014.GROUP_ACTION: self.group_action_fn_name,
+            MACHINES.YANG2014.METRIC: self.metric_fn_name,
+            MACHINES.YANG2014.INTERPOLATION: self.interpolation_fn_name,
+            MACHINES.YANG2014.SIMILARITY: self.similarity_fn_name,
+        }
+
 
 if __name__ == "__main__":
     import jax
@@ -319,7 +334,7 @@ if __name__ == "__main__":
     memory_depth = 8
     learning_rate = 5e-3
 
-    memory = Memory(
+    memory = LieAccessMemory(
         jax.random.key(globals.JAX.RANDOM_SEED),
         (memory_depth,),
         optax.adam(learning_rate),  # TODO nothing is done with optimizer right now...

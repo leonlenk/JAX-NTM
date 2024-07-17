@@ -7,7 +7,7 @@ from tqdm import tqdm
 from Common import globals
 from Common.MemoryInterface import MemoryInterface
 from Controllers.NTM_graves2014 import NTMReadController, NTMWriteController
-from Memories.NTM_graves2014 import Memory
+from Memories.NTM_graves2014 import NTMMemory
 
 
 def init_train_state(
@@ -152,7 +152,7 @@ if __name__ == "__main__":
     rng_key = jax.random.key(globals.JAX.RANDOM_SEED)
     key1, key2, key3, key4 = jax.random.split(rng_key, num=4)
 
-    memory_model = Memory(key3, (1, test_n, test_m), optax.adam(learning_rate))
+    memory_model = NTMMemory(key3, (1, test_n, test_m), optax.adam(learning_rate))
     read_controller = NTMReadController(test_n, test_m)
     write_controller = NTMWriteController(test_n, test_m)
 

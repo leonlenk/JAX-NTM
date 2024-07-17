@@ -155,14 +155,14 @@ class NTMWriteController(NTMControllerTemplate):
 
 # TODO: add test cases
 if __name__ == "__main__":
-    from Memories.NTM_graves2014 import Memory
+    from Memories.NTM_graves2014 import NTMMemory
 
     test_n = 8
     test_m = 9
     test_model_feature_size = 10
     learning_rate = 5e-3
 
-    memory_model = Memory()
+    memory_model = NTMMemory()
     memory_weights = jnp.zeros((test_n, test_m))
     read_controller = NTMReadController(test_n, test_m)
     write_controller = NTMWriteController(test_n, test_m)

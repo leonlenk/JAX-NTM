@@ -170,11 +170,12 @@ class TrainingConfig(TrainingConfigInterface):
 
 
 if __name__ == "__main__":
-    from Backbone.NTM_graves2014 import LSTMModel
-    from Common.globals import CURRICULUM
+    from Backbones.NTM_graves2014 import LSTMModel
+    from Common.Checkpoint import CheckpointWrapper, TrainingMetadata
+    from Common.globals import CURRICULUM, METADATA
     from Controllers.NTM_graves2014 import NTMReadController, NTMWriteController
     from Datasets.copy import CopyLoader
-    from Memories.NTM_graves2014 import Memory
+    from Memories.NTM_graves2014 import NTMMemory
     from Training.Curriculum_zaremba2014 import CurriculumSchedulerZaremba2014
     from Training.training_loop import train
 
@@ -184,7 +185,7 @@ if __name__ == "__main__":
     model_config = ModelConfig(
         learning_rate=1e-2,
         optimizer=optax.adamw,
-        memory_class=Memory,
+        memory_class=NTMMemory,
         backbone_class=LSTMModel,
         read_head_class=NTMReadController,
         write_head_class=NTMWriteController,
@@ -219,6 +220,26 @@ if __name__ == "__main__":
         config=dataset_config,
     )
 
+    training_metadata = TrainingMetadata(
+        Backbone={str(0): training_config.model},
+        Controller={
+            f"{METADATA.COMPONENTS.CONTROLLERS.READ}{0}": training_config.model.read_head,
+            f"{METADATA.COMPONENTS.CONTROLLERS.WRITE}{0}": training_config.model.write_head,
+        },
+        Memory={str(0): training_config.memory_model},
+        DataEncoder={},
+        CurriculumScheduler={str(0): curric},
+        Dataloader={
+            METADATA.COMPONENTS.DATALOADERS.TRAIN: train_dataset,
+            METADATA.COMPONENTS.DATALOADERS.VAL: val_dataset,
+        },
+        TrainingConfig={str(0): training_config},
+    )
+
+    checkpoint_wrapper = CheckpointWrapper(
+        "NTM_graves2014_copy_test", delete_existing=True
+    )
+
     train(
         project_name=globals.WANDB.PROJECTS.CODE_TESTING,
         training_config=training_config,
@@ -226,4 +247,6 @@ if __name__ == "__main__":
         train_dataset=train_dataset,
         val_dataset=val_dataset,
         wandb_tags=[globals.WANDB.TAGS.CODE_TESTING],
+        checkpoint_wrapper=checkpoint_wrapper,
+        training_metadata=training_metadata,
     )
