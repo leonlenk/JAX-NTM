@@ -48,7 +48,7 @@ class MemoryVisualizerWrapper(MemoryInterface):
 
     Usage:
     memory = Memory()
-    memory = MemoryVisualizerWrapper(memory)
+    memory = MemoryVisualizerWrapper(memory, ...)
     """
 
     def __init__(
@@ -59,7 +59,6 @@ class MemoryVisualizerWrapper(MemoryInterface):
         delete_existing: bool = False,
     ):
         self.wrapped_memory = wrapped_memory
-        self.weights = self.wrapped_memory.weights
         self.save_dir: Path = Path(save_dir) if save_dir else Path("")
 
         if not self.save_dir.is_absolute():
@@ -73,9 +72,6 @@ class MemoryVisualizerWrapper(MemoryInterface):
         if delete_existing:
             if self.save_dir.is_dir():
                 shutil.rmtree(str(self.save_dir))
-
-    def apply_gradients(self, gradients) -> None:
-        return self.wrapped_memory.apply_gradients(gradients)
 
     def read(self, memory_weights, read_weights):
         memory_visualization.plot_memory_state(

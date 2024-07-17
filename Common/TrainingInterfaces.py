@@ -116,6 +116,7 @@ class DataloaderInterface(ABC):
 
         self.iterations = 0
 
+        # get the cache location /Datasets/cache/
         self.common_directory = os.path.abspath(os.path.dirname(__file__) + "/..")
         self.cache_dir = os.path.join(self.common_directory, DATASETS.CACHE_LOCATION)
 

@@ -2,6 +2,7 @@
 Visualization_Outputs/
 wandb/
 Datasets/cache/
+Checkpoints/
 
 # wp
 *.swp

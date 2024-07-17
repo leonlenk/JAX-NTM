@@ -8,8 +8,14 @@ Global definitions of hard coded variables.
 # JAX related variables
 class JAX:
     PARAMS = "params"
+    STATE = "state"
+    METADATA = "metadata"
+
     RANDOM_SEED = 137
     EPSILON = 1e-6
+
+    class CHECKPOINTS:
+        DIR = "Checkpoints"
 
 
 # Machine Specific Variables
