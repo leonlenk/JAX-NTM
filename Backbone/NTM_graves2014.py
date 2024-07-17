@@ -60,6 +60,7 @@ class LSTMModel(BackboneInterface):
 if __name__ == "__main__":
     import optax
     from flax.training import train_state
+    from jax.tree_util import tree_flatten
 
     from Controllers.NTM_graves2014 import NTMReadController, NTMWriteController
     from Memories.NTM_graves2014 import Memory
@@ -124,8 +125,11 @@ if __name__ == "__main__":
 
         return jnp.sum(sample_batch)
 
-    gradient_fn = jax.grad(loss_fn, argnums=(0, 1))
-    model_grads, mem_grads = gradient_fn(model_state.params, memory_model.weights)
+    gradient_fn = jax.grad(loss_fn, argnums=(0))
+    model_grads = gradient_fn(model_state.params, memory_weights)
 
-    print(model_grads)
-    print(mem_grads)
+    flat_grads, _ = tree_flatten(model_grads)
+    for grad in flat_grads:
+        assert jnp.nonzero(grad)
+
+    print("passed all tests")

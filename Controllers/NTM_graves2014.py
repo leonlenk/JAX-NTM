@@ -163,6 +163,7 @@ if __name__ == "__main__":
     learning_rate = 5e-3
 
     memory_model = Memory()
+    memory_weights = jnp.zeros((test_n, test_m))
     read_controller = NTMReadController(test_n, test_m)
     write_controller = NTMWriteController(test_n, test_m)
 
@@ -173,7 +174,7 @@ if __name__ == "__main__":
         key1,
         jnp.ones((test_model_feature_size,)),
         jnp.ones((test_n,)),
-        memory_model.weights,
+        memory_weights,
         memory_model,
     )
     print("Initialized read controller")
@@ -181,7 +182,7 @@ if __name__ == "__main__":
         key2,
         jnp.ones((test_model_feature_size,)),
         jnp.ones((test_n,)),
-        memory_model.weights,
+        memory_weights,
         memory_model,
     )
     print("Initialized write controller")

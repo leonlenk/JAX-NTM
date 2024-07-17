@@ -99,15 +99,16 @@ if __name__ == "__main__":
     test_m = 4
     learning_rate = 5e-3
     memory = Memory()
+    weights = jnp.zeros((test_n, test_m))
 
     read_weights = jnp.divide(jnp.ones(test_n), test_n)
 
     rng_key = jax.random.key(globals.JAX.RANDOM_SEED)
     # print(memory_variables)
 
-    read_output = memory.read(memory.weights, read_weights)
+    read_output = memory.read(weights, read_weights)
     # print(f'read output: {read_output}')
-    expected_read = jnp.average(memory.weights, axis=0)
+    expected_read = jnp.average(weights, axis=0)
 
     assert (
         jnp.sum(jnp.abs(jnp.subtract(read_output, expected_read))) < test_m * 1e-5
@@ -118,7 +119,7 @@ if __name__ == "__main__":
     erase_vector = jnp.expand_dims(jnp.multiply(jnp.ones(test_m), test_n), axis=0)
     add_vector = jnp.expand_dims(jnp.multiply(jnp.ones(test_m), test_n), axis=0)
     write_output = memory.write(
-        memory.weights,
+        weights,
         write_weights,
         erase_vector,
         add_vector,
@@ -142,7 +143,7 @@ if __name__ == "__main__":
         )
         return -jnp.sum(jnp.log(likelihoods))
 
-    mem_grad, read_grad = jax.grad(loss, (0, 1))(memory.weights, read_weights)
+    mem_grad, read_grad = jax.grad(loss, (0, 1))(weights, read_weights)
     # print(f'{mem_grad=}')
     # print(f'{read_grad=}')
     print("Jax Grad on memory write is not erroring")
