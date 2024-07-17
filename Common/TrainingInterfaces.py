@@ -163,6 +163,10 @@ class DataloaderInterface(ABC):
     def criterion(self, predictions: Array, targets: Array) -> Array:
         raise NotImplementedError
 
+    @abstractmethod
+    def accuracy_metric(self, predictions: Array, targets: Array) -> Array:
+        raise NotImplementedError
+
     def update_split(self, new_split: str):
         """Changes the split (train / test / val) used to pull data from.
 

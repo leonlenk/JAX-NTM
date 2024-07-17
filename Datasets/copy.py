@@ -60,6 +60,9 @@ class CopyLoader(DataloaderInterface):
     def criterion(self, predictions, targets):
         return jnp.mean(optax.losses.l2_loss(predictions, targets))
 
+    def accuracy_metric(self, predictions, targets):
+        return jnp.mean(jnp.isclose(predictions, targets))
+
     def update_split(self, new_split: str):
         pass
 

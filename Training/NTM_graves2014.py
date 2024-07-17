@@ -1,3 +1,4 @@
+from functools import partial
 from typing import Callable, Type
 
 import jax
@@ -24,8 +25,6 @@ class ModelConfig(ModelConfigInterface):
         memory_M: int,
         memory_N: int,
         num_layers: int,
-        num_outputs: int,
-        input_length: int,
         input_features: int,
     ) -> None:
         self.learning_rate = learning_rate
@@ -37,8 +36,6 @@ class ModelConfig(ModelConfigInterface):
         self.memory_M = memory_M
         self.memory_N = memory_N
         self.num_layers = num_layers
-        self.num_outputs = num_outputs
-        self.input_length = input_length
         self.input_features = input_features
 
 
@@ -54,28 +51,34 @@ class TrainingConfig(TrainingConfigInterface):
         self.MEMORY_WIDTH = (model_config.memory_N,)
         self.model, self.model_state, self.memory_model = self._init_models()
 
-    def loss_fn(self, model_params, data, target, criterion):
-        # batch the function
-        def prediction_fn(
-            data, memory_weights, read_previous, write_previous, read_data, memory_model
-        ):
-            data = jnp.concat((data, read_data), axis=-1)
-            (
-                (output, read_data, memory_weights, read_previous, write_previous),
-                variables,
-            ) = self.model_state.apply_fn(
-                {globals.JAX.PARAMS: model_params},
-                data,
-                memory_weights,
-                read_previous,
-                write_previous,
-                memory_model,
-                mutable=["state"],
-            )
-            return output, read_data, memory_weights, read_previous, write_previous
+    @staticmethod
+    @partial(jax.vmap, in_axes=(0, 0, 0, 0, 0, None, None, None))
+    def _prediction_fn(
+        data,
+        memory_weights,
+        read_previous,
+        write_previous,
+        read_data,
+        memory_model,
+        model_params,
+        model_state,
+    ):
+        data = jnp.concat((data, read_data), axis=-1)
+        (
+            (output, read_data, memory_weights, read_previous, write_previous),
+            variables,
+        ) = model_state.apply_fn(
+            {globals.JAX.PARAMS: model_params},
+            data,
+            memory_weights,
+            read_previous,
+            write_previous,
+            memory_model,
+            mutable=["state"],
+        )
+        return output, read_data, memory_weights, read_previous, write_previous
 
-        batched_prediction_fn = jax.vmap(prediction_fn, in_axes=(0, 0, 0, 0, 0, None))
-
+    def _run_model(self, model_params, data, output_shape):
         # initial values
         read_previous = jnp.zeros((data.shape[0],) + self.MEMORY_WIDTH).at[:, 0].set(1)
         write_previous = jnp.zeros((data.shape[0],) + self.MEMORY_WIDTH).at[:, 0].set(1)
@@ -85,35 +88,42 @@ class TrainingConfig(TrainingConfigInterface):
         # processing loop
         for sequence in range(data.shape[1]):
             output, read_data, memory_weights, read_previous, write_previous = (
-                batched_prediction_fn(
+                self._prediction_fn(
                     data[:, sequence],
                     memory_weights,
                     read_previous,
                     write_previous,
                     read_data,
                     self.memory_model,
+                    model_params,
+                    self.model_state,
                 )
             )
 
-        output = jnp.empty_like(target)
-        for sequence in range(target.shape[1]):
+        output = jnp.empty(output_shape)
+        for sequence in range(output_shape[1]):
             (
                 sequence_output,
                 read_data,
                 memory_weights,
                 read_previous,
                 write_previous,
-            ) = batched_prediction_fn(
+            ) = self._prediction_fn(
                 jnp.zeros_like(data[:, 0]),
                 memory_weights,
                 read_previous,
                 write_previous,
                 read_data,
                 self.memory_model,
+                model_params,
+                self.model_state,
             )
             output = output.at[:, sequence].set(sequence_output)
+        return output, ("placeholder",)
 
-        return criterion(output, target), ("placeholder",)
+    def loss_fn(self, model_params, data, target, criterion):
+        output, metrics = self._run_model(model_params, data, target.shape)
+        return criterion(output, target), metrics
 
     def train_step(self, data, target, criterion):
         gradient_fn = jax.value_and_grad(self.loss_fn, argnums=(0), has_aux=True)
@@ -123,14 +133,15 @@ class TrainingConfig(TrainingConfigInterface):
         self.model_state = self.model_state.apply_gradients(grads=model_grads)
         return {globals.METRICS.LOSS: loss}
 
-    def val_step(self, data):
-        return {}
+    def val_step(self, data, target, criterion):
+        output, (metric,) = self._run_model(self.model_state.params, data, target.shape)
+        return {globals.METRICS.ACCURACY: criterion(output, target)}
 
     def _init_models(
         self,
     ) -> tuple[BackboneInterface, train_state.TrainState, MemoryInterface]:
         rng_key = jax.random.key(globals.JAX.RANDOM_SEED)
-        key1, key2, key3 = jax.random.split(rng_key, num=3)
+        key1, key2 = jax.random.split(rng_key, num=2)
 
         # init memory
         memory_model = self.model_config.memory_class()
@@ -141,10 +152,10 @@ class TrainingConfig(TrainingConfigInterface):
 
         # init backbone
         model = self.model_config.backbone_class(
-            key2,
+            key1,
             self.model_config.memory_M,
             self.model_config.num_layers,
-            self.model_config.num_outputs,
+            self.model_config.input_features,
             read_head,
             write_head,
         )
@@ -153,7 +164,7 @@ class TrainingConfig(TrainingConfigInterface):
         )
         memory_weights = jnp.ones(self.MEMORY_SHAPE)
         params = model.init(
-            key3,
+            key1,
             init_input,
             memory_weights,
             jnp.ones(self.MEMORY_WIDTH),
@@ -167,3 +178,63 @@ class TrainingConfig(TrainingConfigInterface):
         )
 
         return model, model_state, memory_model
+
+
+if __name__ == "__main__":
+    from Backbone.NTM_graves2014 import LSTMModel
+    from Common.globals import CURRICULUM
+    from Controllers.NTM_graves2014 import NTMReadController, NTMWriteController
+    from Datasets.copy import CopyLoader
+    from Memories.NTM_graves2014 import Memory
+    from Training.Curriculum_zaremba2014 import CurriculumSchedulerZaremba2014
+    from Training.training_loop import train
+
+    MEMORY_DEPTH = 12
+    INPUT_SIZE = 8
+
+    model_config = ModelConfig(
+        learning_rate=1e-2,
+        optimizer=optax.adamw,
+        memory_class=Memory,
+        backbone_class=LSTMModel,
+        read_head_class=NTMReadController,
+        write_head_class=NTMWriteController,
+        memory_M=MEMORY_DEPTH,
+        memory_N=8,
+        num_layers=1,
+        input_features=INPUT_SIZE,
+    )
+    training_config = TrainingConfig(model_config)
+
+    curriculum_config = {
+        CURRICULUM.CONFIGS.ACCURACY_THRESHOLD: 0.9,
+        CURRICULUM.CONFIGS.MIN: 3,
+        CURRICULUM.CONFIGS.MAX: 3,
+        CURRICULUM.CONFIGS.ZAREMBA2014.P1: 0.10,
+        CURRICULUM.CONFIGS.ZAREMBA2014.P2: 0.25,
+        CURRICULUM.CONFIGS.ZAREMBA2014.P3: 0.65,
+    }
+    curric = CurriculumSchedulerZaremba2014(curriculum_config)
+    dataset_config = {globals.DATASETS.CONFIGS.CURRICULUM_SCHEDULER: curric}
+    train_dataset = CopyLoader(
+        batch_size=256,
+        num_batches=50,
+        memory_depth=INPUT_SIZE,
+        config=dataset_config,
+    )
+
+    val_dataset = CopyLoader(
+        batch_size=256,
+        num_batches=5,
+        memory_depth=INPUT_SIZE,
+        config=dataset_config,
+    )
+
+    train(
+        project_name=globals.WANDB.PROJECTS.CODE_TESTING,
+        training_config=training_config,
+        num_epochs=5,
+        train_dataset=train_dataset,
+        val_dataset=val_dataset,
+        wandb_tags=[globals.WANDB.TAGS.CODE_TESTING],
+    )
