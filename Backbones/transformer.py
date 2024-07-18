@@ -120,9 +120,7 @@ class TransformerModel(BackboneInterface):
         # pass the input through the transformer layers
         for i in range(self.layers):
             input, new_memory_weights, new_read_previous, new_write_previous = (
-                self.transformer_layers[
-                    i
-                ](
+                self.transformer_layers[i](
                     input,
                     memory_weights[i],
                     read_previous[i],
@@ -140,13 +138,19 @@ class TransformerModel(BackboneInterface):
 
 
 if __name__ == "__main__":
+    import optax
+    from flax.training import train_state
+    from jax.tree_util import tree_flatten
+
     from Controllers.NTM_graves2014 import NTMReadController, NTMWriteController
     from Memories.NTM_graves2014 import NTMMemory
 
-    memory_n = 8
+    memory_n = 256
     memory_m = 12
     num_layers = 5
     dim_model = 512
+    lr = 1e-3
+    num_recursions = 2
 
     prng_key = jax.random.key(globals.JAX.RANDOM_SEED)
     key1, key2 = jax.random.split(prng_key, num=2)
@@ -157,7 +161,7 @@ if __name__ == "__main__":
     model = TransformerModel(
         prng_key=key1,
         layers=num_layers,
-        num_outputs=10000,
+        num_outputs=dim_model,
         read_heads=read_heads,
         write_heads=write_heads,
         dim_model=dim_model,
@@ -170,12 +174,45 @@ if __name__ == "__main__":
     write_previous = jnp.ones(((num_layers, memory_n)))
 
     init_input = jnp.ones((2, dim_model))
-    test_input = jnp.ones((2, dim_model))
 
     params = model.init(
         key2, init_input, memory_weights, read_previous, write_previous, memory_model
     )  # Initialize parameters
-    output = model.apply(
-        params, test_input, memory_weights, read_previous, write_previous, memory_model
-    )  # Forward pass
-    print(output)
+    model_state = train_state.TrainState.create(
+        apply_fn=model.apply,
+        tx=optax.adam(lr),
+        params=params[globals.JAX.PARAMS],
+    )
+
+    def loss_fn(model_params):
+        test_input = jnp.ones((2, dim_model))
+        read_previous = jnp.ones((num_layers, memory_n))
+        write_previous = jnp.ones(((num_layers, memory_n)))
+        memory_weights = jnp.zeros((num_layers, memory_n, memory_m))
+
+        # self, input, memory_weights, read_previous, write_previous, memory_model
+        for _ in range(num_recursions):
+            (
+                test_input,
+                memory_weights,
+                read_previous,
+                write_previous,
+            ) = model_state.apply_fn(
+                {globals.JAX.PARAMS: model_params},
+                test_input,
+                memory_weights,
+                read_previous,
+                write_previous,
+                memory_model,
+            )
+
+        return jnp.sum(test_input)
+
+    gradient_fn = jax.grad(loss_fn, argnums=(0))
+    model_grads = gradient_fn(model_state.params)
+
+    flat_grads, _ = tree_flatten(model_grads)
+    for grad in flat_grads:
+        assert jnp.nonzero(grad), "some of the gradients were zero!"
+
+    print("passed all tests")
