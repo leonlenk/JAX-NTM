@@ -136,17 +136,17 @@ class TrainingConfig(TrainingConfigInterface):
         memory_model = self.model_config.memory_class()
 
         # init read and write heads
-        read_head = self.model_config.read_head_class(*self.MEMORY_SHAPE)
-        write_head = self.model_config.write_head_class(*self.MEMORY_SHAPE)
+        read_head = [self.model_config.read_head_class(*self.MEMORY_SHAPE)]
+        write_head = [self.model_config.write_head_class(*self.MEMORY_SHAPE)]
 
         # init backbone
         model = self.model_config.backbone_class(
             key1,
-            self.model_config.memory_M,
             self.model_config.num_layers,
             self.model_config.input_features,
             read_head,
             write_head,
+            self.model_config.memory_M,
         )
         init_input = jnp.ones(
             (self.model_config.input_features + self.model_config.memory_M)

@@ -1,3 +1,5 @@
+from typing import Sequence
+
 import jax
 import jax.numpy as jnp
 from flax import linen as nn
@@ -13,11 +15,12 @@ class LSTMModel(BackboneInterface):
     """Basic stacked LSTM for controlling an NTM"""
 
     prng_key: Array
-    features: int
     layers: int
     num_outputs: int
-    read_head: ControllerInterface
-    write_head: ControllerInterface
+    read_heads: Sequence[ControllerInterface]
+    write_heads: Sequence[ControllerInterface]
+
+    features: int
 
     def setup(self):
         # add a dense layer for the ultimate output
@@ -34,13 +37,13 @@ class LSTMModel(BackboneInterface):
         for i in range(self.layers):
             hidden, input = lstm_layers[i](hidden, input)
 
-        read_data, read_locations = self.read_head(
+        read_data, read_locations = self.read_head[0](
             input,
             read_previous,
             memory_weights,
             memory_model,
         )
-        memory_weights, write_locations = self.write_head(
+        memory_weights, write_locations = self.write_head[0](
             input,
             write_previous,
             memory_weights,
@@ -88,10 +91,10 @@ if __name__ == "__main__":
     key1, key2, key3 = jax.random.split(jax.random.key(globals.JAX.RANDOM_SEED), num=3)
 
     memory_model = NTMMemory()
-    read_head = NTMReadController(memory_n, memory_m)
-    write_head = NTMWriteController(memory_n, memory_m)
+    read_head = [NTMReadController(memory_n, memory_m)]
+    write_head = [NTMWriteController(memory_n, memory_m)]
 
-    model = LSTMModel(key3, memory_m, layers, num_outputs, read_head, write_head)
+    model = LSTMModel(key3, layers, num_outputs, read_head, write_head, memory_m)
     init_input = jnp.ones((input_features,))
     memory_weights = jnp.zeros((memory_n, memory_m))
     params = model.init(

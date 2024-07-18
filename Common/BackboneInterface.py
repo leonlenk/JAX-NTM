@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from typing import Sequence
 
 from flax import linen as nn
 from jax import Array
@@ -11,12 +12,11 @@ from Common.MemoryInterface import MemoryInterface
 class BackboneInterface(nn.Module, ABC):
     prng_key: Array
     # TODO make more general for e.g. transformers (and override get_metadata with custom info)
-    features: int
     layers: int
     num_outputs: int
     # TODO allow arbitrary numbers of controllers. And make naming consistent between head and controller?
-    read_head: ControllerInterface
-    write_head: ControllerInterface
+    read_heads: Sequence[ControllerInterface]
+    write_heads: Sequence[ControllerInterface]
 
     @abstractmethod
     def setup(self) -> None:
