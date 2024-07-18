@@ -35,7 +35,7 @@ class TransformerLayer(nn.Module):
 
         # read data
         read_data, read_locations = self.read_head(
-            x.flatten(),
+            x[-1],
             read_previous,
             memory_weights,
             memory_model,
@@ -52,7 +52,7 @@ class TransformerLayer(nn.Module):
 
         # write data
         memory_weights, write_locations = self.write_head(
-            ff_output.flatten(),
+            ff_output[-1],
             write_previous,
             memory_weights,
             memory_model,

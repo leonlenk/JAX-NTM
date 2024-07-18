@@ -37,13 +37,13 @@ class LSTMModel(BackboneInterface):
         for i in range(self.layers):
             hidden, input = lstm_layers[i](hidden, input)
 
-        read_data, read_locations = self.read_head[0](
+        read_data, read_locations = self.read_heads[0](
             input,
             read_previous,
             memory_weights,
             memory_model,
         )
-        memory_weights, write_locations = self.write_head[0](
+        memory_weights, write_locations = self.write_heads[0](
             input,
             write_previous,
             memory_weights,
@@ -111,20 +111,19 @@ if __name__ == "__main__":
         params=params[globals.JAX.PARAMS],
     )
 
-    def loss_fn(model_params, memory_weights):
+    def loss_fn(model_params):
         sample_batch = jnp.ones((input_features,))
         read_previous = jnp.ones((memory_n,))
         write_previous = jnp.ones((memory_n,))
+        memory_weights = jnp.zeros((memory_n, memory_m))
+
         for _ in range(num_recursions):
             (
-                (
-                    sample_batch,
-                    read_data,
-                    memory_weights,
-                    read_previous,
-                    write_previous,
-                ),
-                variables,
+                sample_batch,
+                read_data,
+                memory_weights,
+                read_previous,
+                write_previous,
             ) = model_state.apply_fn(
                 {globals.JAX.PARAMS: model_params},
                 sample_batch,
@@ -132,14 +131,11 @@ if __name__ == "__main__":
                 read_previous,
                 write_previous,
                 memory_model,
-                mutable=["state"],
             )
-            sample_batch = jnp.concat((sample_batch, read_data), axis=-1)
-
         return jnp.sum(sample_batch)
 
     gradient_fn = jax.grad(loss_fn, argnums=(0))
-    model_grads = gradient_fn(model_state.params, memory_weights)
+    model_grads = gradient_fn(model_state.params)
 
     flat_grads, _ = tree_flatten(model_grads)
     for grad in flat_grads:

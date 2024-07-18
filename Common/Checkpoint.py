@@ -155,13 +155,13 @@ if __name__ == "__main__":
     from Controllers.NTM_graves2014 import NTMReadController, NTMWriteController
     from Datasets.copy import CopyLoader
     from Memories.NTM_graves2014 import NTMMemory
+    from Training.Backbones.NTM_graves2014 import LSTMConfig, LSTMTrainingConfig
     from Training.Curriculum_zaremba2014 import CurriculumSchedulerZaremba2014
-    from Training.NTM_graves2014 import ModelConfig, TrainingConfig
     from Training.training_loop import train
 
     MEMORY_DEPTH = 12
 
-    model_config = ModelConfig(
+    model_config = LSTMConfig(
         learning_rate=1e-3,
         optimizer=optax.adam,
         memory_class=NTMMemory,
@@ -173,7 +173,7 @@ if __name__ == "__main__":
         num_layers=3,
         input_features=12,
     )
-    training_config = TrainingConfig(model_config)
+    training_config = LSTMTrainingConfig(model_config)
 
     curriculum_config = {
         CURRICULUM.CONFIGS.ACCURACY_THRESHOLD: 0.9,

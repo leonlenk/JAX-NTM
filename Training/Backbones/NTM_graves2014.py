@@ -7,19 +7,19 @@ import jax.numpy as jnp
 import optax
 from flax.training import train_state
 
+from Backbones.NTM_graves2014 import LSTMModel
 from Common import globals
-from Common.BackboneInterface import BackboneInterface
 from Common.ControllerInterface import ControllerInterface
 from Common.MemoryInterface import MemoryInterface
 from Common.TrainingInterfaces import ModelConfigInterface, TrainingConfigInterface
 
 
 @dataclass
-class ModelConfig(ModelConfigInterface):
+class LSTMConfig(ModelConfigInterface):
     learning_rate: float
     optimizer: Callable
     memory_class: Type[MemoryInterface]
-    backbone_class: Type[BackboneInterface]
+    backbone_class: Type[LSTMModel]
     read_head_class: Type[ControllerInterface]
     write_head_class: Type[ControllerInterface]
     memory_M: int
@@ -28,10 +28,10 @@ class ModelConfig(ModelConfigInterface):
     input_features: int
 
 
-class TrainingConfig(TrainingConfigInterface):
-    model_config: ModelConfig
+class LSTMTrainingConfig(TrainingConfigInterface):
+    model_config: LSTMConfig
 
-    def __init__(self, model_config: ModelConfig) -> None:
+    def __init__(self, model_config: LSTMConfig) -> None:
         self.model_config = model_config
         self.MEMORY_SHAPE = (
             model_config.memory_N,
@@ -110,25 +110,9 @@ class TrainingConfig(TrainingConfigInterface):
             output = output.at[:, sequence].set(sequence_output)
         return output, ("placeholder",)
 
-    def loss_fn(self, model_params, data, target, criterion):
-        output, metrics = self._run_model(model_params, data, target.shape)
-        return criterion(output, target), metrics
-
-    def train_step(self, data, target, criterion):
-        gradient_fn = jax.value_and_grad(self.loss_fn, argnums=(0), has_aux=True)
-        ((loss, (metric,)), model_grads) = gradient_fn(
-            self.model_state.params, data, target, criterion
-        )
-        self.model_state = self.model_state.apply_gradients(grads=model_grads)
-        return {globals.METRICS.LOSS: loss}
-
-    def val_step(self, data, target, criterion):
-        output, (metric,) = self._run_model(self.model_state.params, data, target.shape)
-        return {globals.METRICS.ACCURACY: criterion(output, target)}
-
     def _init_models(
         self,
-    ) -> tuple[BackboneInterface, train_state.TrainState, MemoryInterface]:
+    ) -> tuple[LSTMModel, train_state.TrainState, MemoryInterface]:
         rng_key = jax.random.key(globals.JAX.RANDOM_SEED)
         key1, key2 = jax.random.split(rng_key, num=2)
 
@@ -170,7 +154,6 @@ class TrainingConfig(TrainingConfigInterface):
 
 
 if __name__ == "__main__":
-    from Backbones.NTM_graves2014 import LSTMModel
     from Common.Checkpoint import CheckpointWrapper, TrainingMetadata
     from Common.globals import CURRICULUM, METADATA
     from Controllers.NTM_graves2014 import NTMReadController, NTMWriteController
@@ -182,7 +165,7 @@ if __name__ == "__main__":
     MEMORY_DEPTH = 12
     INPUT_SIZE = 8
 
-    model_config = ModelConfig(
+    model_config = LSTMConfig(
         learning_rate=1e-2,
         optimizer=optax.adamw,
         memory_class=NTMMemory,
@@ -194,7 +177,7 @@ if __name__ == "__main__":
         num_layers=1,
         input_features=INPUT_SIZE,
     )
-    training_config = TrainingConfig(model_config)
+    training_config = LSTMTrainingConfig(model_config)
 
     curriculum_config = {
         CURRICULUM.CONFIGS.ACCURACY_THRESHOLD: 0.9,

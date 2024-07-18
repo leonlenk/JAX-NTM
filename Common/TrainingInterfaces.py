@@ -5,6 +5,7 @@ from typing import Any, Callable
 
 import jax
 import jax.numpy as jnp
+from flax import core
 from flax.training.train_state import TrainState
 from jax import Array
 
@@ -232,12 +233,26 @@ class TrainingConfigInterface(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def train_step(self, data: Array, target: Array, criterion: Callable) -> dict:
+    def _run_model(
+        self, model_params: core.FrozenDict, data: Array, output_shape: tuple[int, ...]
+    ) -> tuple[Array, tuple[Any, ...]]:
         raise NotImplementedError
 
-    @abstractmethod
-    def val_step(self, data: Array, target: Array, criterion: Callable) -> dict:
-        raise NotImplementedError
+    def loss_fn(self, model_params, data, target, criterion):
+        output, metrics = self._run_model(model_params, data, target.shape)
+        return criterion(output, target), metrics
+
+    def train_step(self, data, target, criterion):
+        gradient_fn = jax.value_and_grad(self.loss_fn, argnums=(0), has_aux=True)
+        ((loss, (metric,)), model_grads) = gradient_fn(
+            self.model_state.params, data, target, criterion
+        )
+        self.model_state = self.model_state.apply_gradients(grads=model_grads)
+        return {globals.METRICS.LOSS: loss}
+
+    def val_step(self, data, target, criterion):
+        output, (metric,) = self._run_model(self.model_state.params, data, target.shape)
+        return {globals.METRICS.ACCURACY: criterion(output, target)}
 
     @abstractmethod
     def _init_models(self) -> tuple[BackboneInterface, TrainState, MemoryInterface]:
