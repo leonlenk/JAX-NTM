@@ -70,11 +70,12 @@ class CurriculumSchedulerInterface(ABC):
     config: dict = {}
 
     @abstractmethod
-    def __init__(self, config: dict = {}):
+    def __init__(self, initial_curriculum_level: int = 0, config: dict = {}):
         """Initializes the curriculum scheduler.
 
         :param config: a set of configuration options custom to the type of scheduler. Populated with keys from Common.globals.CURRICULUM.CONFIGS
         """
+        self.curriculum_level = initial_curriculum_level
         pass
 
     @abstractmethod
@@ -84,6 +85,10 @@ class CurriculumSchedulerInterface(ABC):
         :param curriculum_params: inputs influencing next curriculum level. Populated with keys from Common.globals.CURRICULUM.PARAMS
         """
         pass
+
+    @abstractmethod
+    def get_curriculum_level(self) -> int:
+        return self.curriculum_level
 
     @abstractmethod
     def get_curriculum(self, batch_size: int) -> Array:
@@ -294,6 +299,9 @@ class CurriculumSchedulerStub(CurriculumSchedulerInterface):
 
     def update_curriculum_level(self, curriculum_params: dict):
         pass
+
+    def get_curriculum_level(self) -> int:
+        return super().get_curriculum_level()
 
     def get_curriculum(self, batch_size: int) -> Array:
         return jnp.ones((batch_size,))
