@@ -206,8 +206,12 @@ if __name__ == "__main__":
     training_metadata = TrainingMetadata(
         Backbone={str(0): training_config.model},
         Controller={
-            f"{METADATA.COMPONENTS.CONTROLLERS.READ}{0}": training_config.model.read_head,
-            f"{METADATA.COMPONENTS.CONTROLLERS.WRITE}{0}": training_config.model.write_head,
+            f"{METADATA.COMPONENTS.CONTROLLERS.READ}{i}": head
+            for i, head in enumerate(training_config.model.read_heads)
+        }
+        | {
+            f"{METADATA.COMPONENTS.CONTROLLERS.WRITE}{i}": head
+            for i, head in enumerate(training_config.model.write_heads)
         },
         Memory={str(0): training_config.memory_model},
         DataEncoder={},

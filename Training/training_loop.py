@@ -63,9 +63,9 @@ def train(
                 train_metrics.append(metrics)
                 pbar.set_postfix(loss=f"{metrics[METRICS.LOSS]:.4f}")
 
+        # combine the metrics from each batch into a single dictionary to log
+        train_metric = metric_aggregator(train_metrics)
         if use_wandb:
-            # combine the metrics from each batch into a single dictionary to log
-            train_metric = metric_aggregator(train_metrics)
             wandb_log_dict = {
                 f"{WANDB.LOGS.TRAIN}_{key}": train_metric[key] for key in train_metric
             }
@@ -91,9 +91,10 @@ def train(
                         # record the results
                         val_metrics.append(metrics)
                         pbar.set_postfix(acc=f"{metrics[METRICS.ACCURACY] * 100:.2f}%")
+
+                # combine the metrics from each batch into a single dictionary to log
+                val_metric = metric_aggregator(val_metrics)
                 if use_wandb:
-                    # combine the metrics from each batch into a single dictionary to log
-                    val_metric = metric_aggregator(val_metrics)
                     wandb_log_dict = {
                         f"{WANDB.LOGS.VAL}_{key}": val_metric[key]
                         for key in train_metric
