@@ -181,8 +181,8 @@ if __name__ == "__main__":
 
     curriculum_config = {
         CURRICULUM.CONFIGS.ACCURACY_THRESHOLD: 0.9,
-        CURRICULUM.CONFIGS.MIN: 3,
-        CURRICULUM.CONFIGS.MAX: 3,
+        CURRICULUM.CONFIGS.MIN: 2,
+        CURRICULUM.CONFIGS.MAX: 10,
         CURRICULUM.CONFIGS.ZAREMBA2014.P1: 0.10,
         CURRICULUM.CONFIGS.ZAREMBA2014.P2: 0.25,
         CURRICULUM.CONFIGS.ZAREMBA2014.P3: 0.65,
@@ -231,9 +231,10 @@ if __name__ == "__main__":
         project_name=globals.WANDB.PROJECTS.CODE_TESTING,
         training_config=training_config,
         training_metadata=training_metadata,
-        num_epochs=5,
+        num_epochs=15,
         train_dataset=train_dataset,
         val_dataset=val_dataset,
         wandb_tags=[globals.WANDB.TAGS.CODE_TESTING],
         checkpoint_wrapper=checkpoint_wrapper,
+        # use_wandb=True,
     )

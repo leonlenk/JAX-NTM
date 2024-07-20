@@ -96,8 +96,7 @@ def train(
                 val_metric = metric_aggregator(val_metrics)
                 if use_wandb:
                     wandb_log_dict = {
-                        f"{WANDB.LOGS.VAL}_{key}": val_metric[key]
-                        for key in train_metric
+                        f"{WANDB.LOGS.VAL}_{key}": val_metric[key] for key in val_metric
                     }
                     wandb_log_dict |= {
                         METRICS.CURRICULUM_LEVEL: val_dataset.curriculum_scheduler.get_curriculum_level()
