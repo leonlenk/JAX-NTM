@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import List
 
 import jax
 import jax.numpy as jnp
@@ -7,16 +7,6 @@ from flax import linen as nn
 from Common import globals
 from Common.ControllerInterface import ControllerInterface
 from Common.MemoryInterface import MemoryInterface
-
-
-def _split_cols(matrix: jax.Array, lengths: Tuple) -> List[jax.Array]:
-    """Split a 2D matrix to variable length columns."""
-    # assert jnp.size(matrix, axis=-1) == sum(
-    # lengths
-    # ), "Lengths must be summed to num columns"
-    length_indices = jnp.cumsum(jnp.asarray(lengths))[:-1]
-
-    return jnp.split(matrix, length_indices, axis=-1)
 
 
 class NTMControllerTemplate(ControllerInterface, nn.Module):
@@ -63,6 +53,18 @@ class NTMReadController(NTMControllerTemplate):
 
         # Corresponding to k, β, g, s, γ sizes from the paper
         self.read_lengths = (self.M_dim_memory, 1, 1, 3, 1)
+        self.length_indices = (
+            self.M_dim_memory,
+            self.M_dim_memory + 1,
+            self.M_dim_memory + 2,
+            self.M_dim_memory + 5,
+        )
+
+        def _split_cols(matrix: jax.Array) -> List[jax.Array]:
+            """Split a 2D matrix to variable length columns."""
+            return jnp.split(matrix, self.length_indices, axis=-1)
+
+        self._split_cols = jax.jit(_split_cols)
 
     def is_read_controller(self) -> bool:
         return True
@@ -80,7 +82,7 @@ class NTMReadController(NTMControllerTemplate):
             kernel_init=self.weight_initializer,
             bias_init=self.bias_initializer,
         )(embeddings)
-        k, β, g, s, y = _split_cols(memory_addresses, self.read_lengths)
+        k, β, g, s, y = self._split_cols(memory_addresses)
 
         # Read from memory
         memory_locations = self._address_memory(
@@ -109,6 +111,21 @@ class NTMWriteController(NTMControllerTemplate):
             self.M_dim_memory,
         )
 
+        self.length_indices = (
+            self.M_dim_memory,
+            self.M_dim_memory + 1,
+            self.M_dim_memory + 2,
+            self.M_dim_memory + 5,
+            self.M_dim_memory + 6,
+            2 * self.M_dim_memory + 6,
+        )
+
+        def _split_cols(matrix: jax.Array) -> List[jax.Array]:
+            """Split a 2D matrix to variable length columns."""
+            return jnp.split(matrix, self.length_indices, axis=-1)
+
+        self._split_cols = jax.jit(_split_cols)
+
     def is_read_controller(self) -> bool:
         return False
 
@@ -131,9 +148,7 @@ class NTMWriteController(NTMControllerTemplate):
             kernel_init=self.weight_initializer,
             bias_init=self.bias_initializer,
         )(embeddings)
-        k, β, g, s, y, erase, add_weight = _split_cols(
-            memory_components, self.write_lengths
-        )
+        k, β, g, s, y, erase, add_weight = self._split_cols(memory_components)
 
         # e should be in [0, 1]
         erase_weight = nn.sigmoid(erase)
