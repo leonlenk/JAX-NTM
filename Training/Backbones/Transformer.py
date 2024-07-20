@@ -93,7 +93,7 @@ class TransformerTrainingConfig(TrainingConfigInterface):
         memory_weights = jnp.zeros((data.shape[0],) + self.MEMORY_SHAPE)
 
         # processing loop
-        for sequence in range(1, data.shape[1]):
+        for sequence in range(1, data.shape[1] + 1):
             output, memory_weights, read_previous, write_previous = self._prediction_fn(
                 data[:, :sequence],
                 memory_weights,
@@ -106,7 +106,7 @@ class TransformerTrainingConfig(TrainingConfigInterface):
 
         # prediciton loop
         output = jnp.empty(output_shape)
-        for sequence in range(output_shape[1]):
+        for sequence in range(output_shape[1] + 1):
             (
                 sequence_output,
                 memory_weights,
@@ -121,6 +121,7 @@ class TransformerTrainingConfig(TrainingConfigInterface):
                 model_params,
                 self.model_state,
             )
+            data = jnp.concat((data, sequence_output), axis=1)
             output = output.at[:, sequence].set(sequence_output[:, -1])
         return output, ("placeholder",)
 
@@ -188,8 +189,8 @@ if __name__ == "__main__":
     from Training.Curriculum_zaremba2014 import CurriculumSchedulerZaremba2014
     from Training.training_loop import train
 
-    MEMORY_DEPTH = 32
-    INPUT_SIZE = 32
+    MEMORY_DEPTH = 8
+    INPUT_SIZE = 8
 
     model_config = TransformerConfig(
         prng_key=jax.random.key(globals.JAX.RANDOM_SEED),
@@ -203,9 +204,9 @@ if __name__ == "__main__":
         memory_N=10,
         num_layers=4,
         dim_model=INPUT_SIZE,
-        num_heads=8,
-        dim_ff=500,
-        max_sequence_len=3,
+        num_heads=4,
+        dim_ff=250,
+        max_sequence_len=10,
     )
     training_config = TransformerTrainingConfig(model_config)
 
