@@ -7,13 +7,14 @@ from Common.TrainingInterfaces import DataloaderInterface
 
 
 class CopyLoader(DataloaderInterface):
-    """Returns an input and a target, both of size (batch_size, max_curriculum_level, memory_depth).
+    """Returns an input and a target, both of size (batch_size, curriculum_level, memory_depth).
     Each item in the batch will have an array of random 0s and 1s with size (curriculum_level - 1, memory_depth - 1).
     Aside from this, all values in the array will be zero for the target.
     The input is the same as the target except for the inclusion of the delimiter (value 1) at location (curriculum_level, memory_depth).
 
     This is implemented by first creating the full size array and then zeroing out each section.
 
+    # TODO update example to new curriculum level strategy (one level for whole batch, not item by item)
     Example:
         batch_size = 3
         memory_depth = 6
@@ -71,7 +72,11 @@ class CopyLoader(DataloaderInterface):
         self.iterations += 1
 
         # get the curriculum levels for each item in the batch
-        curriculum = self.curriculum_scheduler.get_curriculum(self.batch_size)
+        # TODO make the original curriculum strategy (different level for each item in batch) an option
+        # curriculum = self.curriculum_scheduler.get_curriculum(self.batch_size)
+        curriculum = jnp.repeat(
+            self.curriculum_scheduler.get_curriculum(1), self.batch_size
+        )
 
         # create the full matrix
         self.prng, subkey = jax.random.split(self.prng)
