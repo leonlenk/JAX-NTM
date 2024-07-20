@@ -190,7 +190,7 @@ def plot_fuzzy_attention(
                 sc.padding_edges[0],
                 sc.padding_edges[2] + sc.pixel_scale // 2 - sc.font_size_small // 2,
             ),
-            f"{attention_label}: ",
+            attention_label,
             font=font,
             fill=color_foreground,
         )
@@ -203,7 +203,7 @@ def plot_fuzzy_attention(
                 + sc.pixel_scale // 2
                 - sc.font_size_small // 2,
             ),
-            f"{VISUALIZATION.NAMES.MEMORY}: ",
+            VISUALIZATION.NAMES.MEMORY,
             font=font,
             fill=color_foreground,
         )

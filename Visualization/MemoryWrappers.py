@@ -174,15 +174,15 @@ class SequentialInferenceMemoryVisualizer(MemoryInterface):
         text_offset_y = self.sc_small.pixel_scale // 2 - self.sc.font_size // 2
         text_offset_x = self.sc.padding_edges[0]
         label_positions = {
-            f"{VISUALIZATION.SEQUENTIAL_INFERENCE.INPUT}: ": (
+            VISUALIZATION.SEQUENTIAL_INFERENCE.INPUT: (
                 text_offset_x,
                 self.sc.arrow_padding + text_offset_y,
             ),
-            f"{VISUALIZATION.SEQUENTIAL_INFERENCE.OUTPUT}: ": (
+            VISUALIZATION.SEQUENTIAL_INFERENCE.OUTPUT: (
                 text_offset_x,
                 self.input_img.height + self.sc.arrow_padding * 2 + text_offset_y,
             ),
-            f"{VISUALIZATION.SEQUENTIAL_INFERENCE.TARGET}: ": (
+            VISUALIZATION.SEQUENTIAL_INFERENCE.TARGET: (
                 text_offset_x,
                 self.input_img.height
                 + self.target_img.height
