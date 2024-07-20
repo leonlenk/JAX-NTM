@@ -4,54 +4,68 @@ import jax.numpy as jnp
 from jax import Array
 from PIL import Image, ImageDraw, ImageFont
 
-from Common import globals
+from Common.globals import VISUALIZATION
 
-# memory block display size
-pixel_scale = 128
-# padding on edges of image (left, right, top, bottom)
-padding_edges = [pixel_scale // 8, pixel_scale // 8, pixel_scale // 8, pixel_scale // 8]
-# padding between memory blocks
-padding_interior = pixel_scale // 8
 # color definitions (grayscale)
 color_background = 255
 color_foreground = 0
 
-font_size = pixel_scale // 4
-draw_font = ImageFont.load_default(size=font_size)
-font_size_small = pixel_scale // 6
-draw_font_small = ImageFont.load_default(size=font_size_small)
+
+class SizingConstants:
+    def __init__(self, pixel_scale: int = VISUALIZATION.DEFAULT_PIXEL_SCALE):
+        self.pixel_scale = pixel_scale
+        # padding on edges of image (left, right, top, bottom)
+        self.padding_edges = [
+            pixel_scale // 8,
+            pixel_scale // 8,
+            pixel_scale // 8,
+            pixel_scale // 8,
+        ]
+        # padding between memory blocks
+        self.padding_interior = pixel_scale // 8
+
+        self.font_size = pixel_scale // 4
+        self.draw_font = ImageFont.load_default(size=self.font_size)
+        self.font_size_small = pixel_scale // 6
+        self.draw_font_small = ImageFont.load_default(size=self.font_size_small)
+
+        self.line_width = max(pixel_scale // 64, 1)
+
+        self.arrow_padding = pixel_scale // 2
+        self.label_padding = pixel_scale
 
 
 def plot_memory_state_comparison(
     memory_1: Array,
     memory_2: Array,
-    transpose: bool = True,
+    transpose: bool = False,
     save_location: str | None = None,
     annotation: list[str] = ["Target", "Output"],
+    pixel_scale=VISUALIZATION.DEFAULT_PIXEL_SCALE,
 ) -> Image.Image:
     assert len(annotation) == 2, "Must have the exactly two annotations"
     memory_img_1 = plot_memory_state(
-        memory_1, transpose=transpose, annotation=annotation[0]
+        memory_1, transpose=transpose, annotation=annotation[0], pixel_scale=pixel_scale
     )
     memory_img_2 = plot_memory_state(
-        memory_2, transpose=transpose, annotation=annotation[1]
+        memory_2, transpose=transpose, annotation=annotation[1], pixel_scale=pixel_scale
     )
 
     if transpose:
-        img = Image.new(
-            "L", (memory_img_1.width, memory_img_1.height + memory_img_2.height)
-        )
-        img.paste(memory_img_1, (0, 0))
-        img.paste(memory_img_2, (0, memory_img_1.height))
-    else:
         img = Image.new(
             "L", (memory_img_1.width + memory_img_2.width, memory_img_1.height)
         )
         img.paste(memory_img_1, (0, 0))
         img.paste(memory_img_2, (memory_img_1.width, 0))
+    else:
+        img = Image.new(
+            "L", (memory_img_1.width, memory_img_1.height + memory_img_2.height)
+        )
+        img.paste(memory_img_1, (0, 0))
+        img.paste(memory_img_2, (0, memory_img_1.height))
 
     if save_location:
-        img.save(get_save_path(save_location, globals.VISUALIZATION.IMG_EXTENSION))
+        img.save(get_save_path(save_location, VISUALIZATION.IMG_EXTENSION))
 
     return img
 
@@ -59,11 +73,13 @@ def plot_memory_state_comparison(
 def plot_memory_states_gif(
     memories: list[Array],
     attentions: list[Array] | None | list[None] = None,
-    transpose: bool = True,
+    transpose: bool = False,
     save_location: str | None = None,
     loop: int | None = None,
-    frame_duration: int = 500,
+    frame_duration: int = VISUALIZATION.DEFAULT_FRAME_DURATION,
     annotate_frame: bool = False,
+    attention_label: str | None = VISUALIZATION.NAMES.ATTENTION,
+    pixel_scale=VISUALIZATION.DEFAULT_PIXEL_SCALE,
 ) -> list[Image.Image]:
     if attentions is not None:
         assert len(memories) == len(
@@ -81,13 +97,13 @@ def plot_memory_states_gif(
                 attention=attentions[i],
                 transpose=transpose,
                 annotation=annotation,
+                attention_label=attention_label,
+                pixel_scale=pixel_scale,
             )
         )
 
     if save_location:
-        save_location = get_save_path(
-            save_location, globals.VISUALIZATION.GIF_EXTENSION
-        )
+        save_location = get_save_path(save_location, VISUALIZATION.GIF_EXTENSION)
         memory_state_gif[0].save(
             save_location,
             save_all=True,
@@ -103,10 +119,16 @@ def plot_memory_states_gif(
 def plot_fuzzy_attention(
     img: Image.Image,
     attention: Array,
+    attention_label: str | None = VISUALIZATION.NAMES.ATTENTION,
+    small_font: bool = True,
+    pixel_scale=VISUALIZATION.DEFAULT_PIXEL_SCALE,
 ) -> Image.Image:
     assert (
         len(attention.shape) == 1
     ), "Memory state visualization assumes a 1-dimensional attention"
+
+    sc = SizingConstants(pixel_scale)
+    font = sc.draw_font_small if small_font else sc.draw_font
 
     def color_from_value(value: float):
         # clip to (0,1)
@@ -118,47 +140,73 @@ def plot_fuzzy_attention(
         return value_color
 
     # make sure the attention is normalized
-    attention = jnp.divide(attention, jnp.sum(attention))
+    # attention = jnp.divide(attention, jnp.sum(attention))
 
-    # create new image with an extra row of blocks and extra X padding for labeling annotation vs memory
+    # create new image with an extra row of blocks (and optionally extra X padding for labeling annotation vs memory)
+    width_padding = 0
+    if attention_label is not None:
+        width_padding = sc.pixel_scale
+
     img2 = Image.new(
         "L",
-        (img.width + pixel_scale, img.height + pixel_scale + padding_interior),
+        (img.width + width_padding, img.height + sc.pixel_scale + sc.padding_interior),
         color_background,
     )
-    img2.paste(img, (pixel_scale, pixel_scale + padding_interior))
+    img2.paste(img, (width_padding, sc.pixel_scale + sc.padding_interior))
 
     draw = ImageDraw.ImageDraw(img2)
 
     # draw the attention blocks
     for i in range(attention.shape[0]):
         val = float(attention[i].item())
-        x0 = padding_edges[0] + i * (pixel_scale + padding_interior) + pixel_scale
-        y0 = padding_edges[2]
+        x0 = (
+            sc.padding_edges[0]
+            + i * (sc.pixel_scale + sc.padding_interior)
+            + width_padding
+        )
+        y0 = sc.padding_edges[2]
         draw.rectangle(
-            [x0, y0, x0 + pixel_scale, y0 + pixel_scale], fill=color_from_value(val)
+            [x0, y0, x0 + sc.pixel_scale, y0 + sc.pixel_scale],
+            fill=color_from_value(val),
         )
 
+    # draw a line separating attention from memory
+    draw.line(
+        [
+            (0, sc.padding_edges[2] + sc.pixel_scale + sc.padding_interior // 2),
+            (
+                img2.width,
+                sc.padding_edges[2] + sc.pixel_scale + sc.padding_interior // 2,
+            ),
+        ],
+        fill=color_foreground,
+        width=sc.line_width,
+    )
+
     # notate which blocks are attention and which are memory
-    draw.text(
-        (padding_edges[0], padding_edges[2] + pixel_scale // 2 - font_size_small // 2),
-        "Attention: ",
-        font=draw_font_small,
-        fill=color_foreground,
-    )
-    draw.text(
-        (
-            padding_edges[0],
-            padding_edges[2]
-            + pixel_scale
-            + padding_interior
-            + pixel_scale // 2
-            - font_size_small // 2,
-        ),
-        "Memory: ",
-        font=draw_font_small,
-        fill=color_foreground,
-    )
+    if attention_label is not None:
+        draw.text(
+            (
+                sc.padding_edges[0],
+                sc.padding_edges[2] + sc.pixel_scale // 2 - sc.font_size_small // 2,
+            ),
+            f"{attention_label}: ",
+            font=font,
+            fill=color_foreground,
+        )
+        draw.text(
+            (
+                sc.padding_edges[0],
+                sc.padding_edges[2]
+                + sc.pixel_scale
+                + sc.padding_interior
+                + sc.pixel_scale // 2
+                - sc.font_size_small // 2,
+            ),
+            f"{VISUALIZATION.NAMES.MEMORY}: ",
+            font=font,
+            fill=color_foreground,
+        )
 
     return img2
 
@@ -166,10 +214,15 @@ def plot_fuzzy_attention(
 def plot_memory_state(
     memory: Array,
     attention: Array | None = None,
-    transpose: bool = True,
+    transpose: bool = False,
     save_location: str | None = None,
     annotation: str | None = None,
+    attention_label: str | None = VISUALIZATION.NAMES.ATTENTION,
+    small_attention_font: bool = True,
+    pixel_scale=VISUALIZATION.DEFAULT_PIXEL_SCALE,
 ) -> Image.Image:
+    sc = SizingConstants(pixel_scale)
+
     assert (
         len(memory.shape) == 2
     ), "Memory state visualization assumes a 2-dimensional memory"
@@ -188,16 +241,16 @@ def plot_memory_state(
 
     N, M = memory.shape
     width = (
-        padding_edges[0]
-        + padding_edges[1]
-        + N * pixel_scale
-        + (N - 1) * padding_interior
+        sc.padding_edges[0]
+        + sc.padding_edges[1]
+        + N * sc.pixel_scale
+        + (N - 1) * sc.padding_interior
     )
     height = (
-        padding_edges[2]
-        + padding_edges[3]
-        + M * pixel_scale
-        + (M - 1) * padding_interior
+        sc.padding_edges[2]
+        + sc.padding_edges[3]
+        + M * sc.pixel_scale
+        + (M - 1) * sc.padding_interior
     )
 
     img = Image.new("L", (width, height))
@@ -210,31 +263,40 @@ def plot_memory_state(
     for i in range(N):
         for j in range(M):
             val = float(memory[i, j].item())
-            x0 = padding_edges[0] + i * (pixel_scale + padding_interior)
-            y0 = padding_edges[2] + j * (pixel_scale + padding_interior)
+            x0 = sc.padding_edges[0] + i * (sc.pixel_scale + sc.padding_interior)
+            y0 = sc.padding_edges[2] + j * (sc.pixel_scale + sc.padding_interior)
             draw.rectangle(
-                [x0, y0, x0 + pixel_scale, y0 + pixel_scale], fill=color_from_value(val)
+                [x0, y0, x0 + sc.pixel_scale, y0 + sc.pixel_scale],
+                fill=color_from_value(val),
             )
     if attention is not None:
-        img = plot_fuzzy_attention(img, attention)
+        img = plot_fuzzy_attention(
+            img,
+            attention,
+            attention_label=attention_label,
+            pixel_scale=sc.pixel_scale,
+            small_font=small_attention_font,
+        )
 
     if annotation is not None:
         # make a bigger image for the annotation
-        img2 = Image.new("L", (img.width, img.height + font_size * 2), color_background)
-        img2.paste(img, (0, font_size * 2))
+        img2 = Image.new(
+            "L", (img.width, img.height + sc.font_size * 2), color_background
+        )
+        img2.paste(img, (0, sc.font_size * 2))
         img = img2
 
         draw = ImageDraw.ImageDraw(img)
 
         draw.text(
-            (padding_edges[0], font_size // 2),
+            (sc.padding_edges[0], sc.font_size // 2),
             annotation,
-            font=draw_font,
+            font=sc.draw_font,
             fill=color_foreground,
         )
 
     if save_location:
-        img.save(get_save_path(save_location, globals.VISUALIZATION.IMG_EXTENSION))
+        img.save(get_save_path(save_location, VISUALIZATION.IMG_EXTENSION))
 
     return img
 
@@ -245,13 +307,12 @@ def get_save_path(save_location: str, suffix: str):
         save_loc_path = save_loc_path.with_suffix(suffix)
 
     if not save_loc_path.is_absolute():
-        save_loc_path = Path(globals.VISUALIZATION.OUTPUT_DIR / save_loc_path)
+        save_loc_path = Path(VISUALIZATION.OUTPUT_DIR / save_loc_path)
 
     save_loc_path.parent.mkdir(parents=True, exist_ok=True)
     return str(save_loc_path)
 
 
-# TODO: add test cases
 if __name__ == "__main__":
     test_memory = jnp.array(
         [
@@ -260,7 +321,7 @@ if __name__ == "__main__":
             [0, 0, 1, 0.5, 0, 1, 0, 0],
             [0, 0, 0, 1, 0.5, 0, 1, 0],
         ]
-    )
+    ).transpose()
 
     test_memory_comparison = jnp.array(
         [
@@ -269,7 +330,7 @@ if __name__ == "__main__":
             [0, 1, 0.5, 0, 1, 0, 0, 0],
             [1, 0.5, 0, 1, 0, 0, 0, 0],
         ]
-    )
+    ).transpose()
 
     test_memory_attention = jnp.array([0, 0, 0, 0.1, 0.3, 0.1, 0.5, 0])
 
@@ -281,7 +342,7 @@ if __name__ == "__main__":
                 [0, 0, 1, 0.5, 0, 1, 0, 0],
                 [0, 0, 0, 1, 0.5, 0, 1, 0],
             ]
-        ),
+        ).transpose(),
         jnp.array(
             [
                 [0, 1, 0.5, 0, 1, 0, 0, 0],
@@ -289,7 +350,7 @@ if __name__ == "__main__":
                 [0, 0, 0, 1, 0.5, 0, 1, 0],
                 [0, 0, 0, 0, 1, 0.5, 0, 1],
             ]
-        ),
+        ).transpose(),
         jnp.array(
             [
                 [0, 0, 1, 0.5, 0, 1, 0, 0],
@@ -297,7 +358,7 @@ if __name__ == "__main__":
                 [0, 0, 0, 0, 1, 0.5, 0, 1],
                 [1, 0, 0, 0, 0, 1, 0.5, 0],
             ]
-        ),
+        ).transpose(),
         jnp.array(
             [
                 [0, 0, 0, 1, 0.5, 0, 1, 0],
@@ -305,7 +366,7 @@ if __name__ == "__main__":
                 [1, 0, 0, 0, 0, 1, 0.5, 0],
                 [0, 1, 0, 0, 0, 0, 1, 0.5],
             ]
-        ),
+        ).transpose(),
         jnp.array(
             [
                 [0, 0, 0, 0, 1, 0.5, 0, 1],
@@ -313,13 +374,15 @@ if __name__ == "__main__":
                 [0, 1, 0, 0, 0, 0, 1, 0.5],
                 [0.5, 0, 1, 0, 0, 0, 0, 1],
             ]
-        ),
+        ).transpose(),
     ]
 
     memory_state_image = plot_memory_state(
         test_memory,
         attention=test_memory_attention,
         annotation="Memory visualization test",
+        # attention_label=None,
+        pixel_scale=128,
         save_location="test_mem.png",
     )
     # memory_state_image.show()

@@ -73,12 +73,22 @@ class VISUALIZATION:
     OUTPUT_DIR = "Visualization_Outputs/"
     GIF_EXTENSION = ".gif"
     IMG_EXTENSION = ".png"
+    DEFAULT_PIXEL_SCALE = 128
+    DEFAULT_FRAME_DURATION = 500
 
     class NAMES:
         DEFAULT = "memory"
-        READ = "read"
-        WRITE = "write"
-        ADDRESS = "address"
+        READ = "Read"
+        WRITE = "Write"
+        ADDRESS = "Address"
+        INFERENCE_GIF = "inference_gif"
+        ATTENTION = "Attention"
+        MEMORY = "Memory"
+
+    class SEQUENTIAL_INFERENCE:
+        INPUT = "Input"
+        OUTPUT = "Output"
+        TARGET = "Target"
 
 
 # Training Configuration (Hyperparameters)

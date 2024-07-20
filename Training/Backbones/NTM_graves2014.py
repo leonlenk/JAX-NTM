@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from functools import partial
 from typing import Callable, Type
 
 import jax
@@ -39,9 +38,11 @@ class LSTMTrainingConfig(TrainingConfigInterface):
         )
         self.MEMORY_WIDTH = (model_config.memory_N,)
         self.model, self.model_state, self.memory_model = self._init_models()
+        self._vmapped_prediction_fn = jax.vmap(
+            self._prediction_fn, in_axes=(0, 0, 0, 0, 0, None, None, None)
+        )
 
     @staticmethod
-    @partial(jax.vmap, in_axes=(0, 0, 0, 0, 0, None, None, None))
     def _prediction_fn(
         data,
         memory_weights,
@@ -77,7 +78,7 @@ class LSTMTrainingConfig(TrainingConfigInterface):
         # processing loop
         for sequence in range(data.shape[1]):
             output, read_data, memory_weights, read_previous, write_previous = (
-                self._prediction_fn(
+                self._vmapped_prediction_fn(
                     data[:, sequence],
                     memory_weights,
                     read_previous,
@@ -97,7 +98,7 @@ class LSTMTrainingConfig(TrainingConfigInterface):
                 memory_weights,
                 read_previous,
                 write_previous,
-            ) = self._prediction_fn(
+            ) = self._vmapped_prediction_fn(
                 jnp.zeros_like(data[:, 0]),
                 memory_weights,
                 read_previous,
@@ -231,7 +232,7 @@ if __name__ == "__main__":
         project_name=globals.WANDB.PROJECTS.CODE_TESTING,
         training_config=training_config,
         training_metadata=training_metadata,
-        num_epochs=15,
+        num_epochs=1,
         train_dataset=train_dataset,
         val_dataset=val_dataset,
         wandb_tags=[globals.WANDB.TAGS.CODE_TESTING],
