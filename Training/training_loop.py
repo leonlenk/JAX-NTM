@@ -4,8 +4,8 @@ import jax.numpy as jnp
 from tqdm import tqdm
 
 import wandb
-from Common import globals
 from Common.Checkpoint import CheckpointWrapper, TrainingMetadata
+from Common.globals import CHECKPOINTS, CONFIG, METRICS, WANDB
 from Common.TrainingInterfaces import DataloaderInterface, TrainingConfigInterface
 
 
@@ -37,14 +37,14 @@ def train(
 ):
     if use_wandb:
         wandb_config = {
-            globals.CONFIG.EPOCHS: num_epochs,
-            globals.CHECKPOINTS.METADATA: training_metadata.get_metadata(),
+            CONFIG.EPOCHS: num_epochs,
+            CHECKPOINTS.METADATA: training_metadata.get_metadata(),
         }
 
         wandb.init(
             project=project_name,
             name=wandb_run_name,
-            job_type=globals.WANDB.JOBS.TRAIN,
+            job_type=WANDB.JOBS.TRAIN,
             config=wandb_config,
             tags=wandb_tags,
         )
@@ -61,16 +61,19 @@ def train(
                 )
                 # record the results
                 train_metrics.append(metrics)
-                pbar.set_postfix(loss=f"{metrics[globals.METRICS.LOSS]:.4f}")
+                pbar.set_postfix(loss=f"{metrics[METRICS.LOSS]:.4f}")
 
         # combine the metrics from each batch into a single dictionary to log
         train_metric = metric_aggregator(train_metrics)
         if use_wandb:
+            wandb_log_dict = {
+                f"{WANDB.LOGS.TRAIN}_{key}": train_metric[key] for key in train_metric
+            }
+            wandb_log_dict |= {
+                METRICS.CURRICULUM_LEVEL: train_dataset.curriculum_scheduler.get_curriculum_level()
+            }
             wandb.log(
-                {
-                    f"{globals.WANDB.LOGS.TRAIN}_{key}": train_metric[key]
-                    for key in train_metric
-                },
+                wandb_log_dict,
                 step=epoch,
             )
 
@@ -87,17 +90,20 @@ def train(
                         )
                         # record the results
                         val_metrics.append(metrics)
-                        pbar.set_postfix(
-                            acc=f"{metrics[globals.METRICS.ACCURACY] * 100:.2f}%"
-                        )
+                        pbar.set_postfix(acc=f"{metrics[METRICS.ACCURACY] * 100:.2f}%")
+
                 # combine the metrics from each batch into a single dictionary to log
                 val_metric = metric_aggregator(val_metrics)
                 if use_wandb:
+                    wandb_log_dict = {
+                        f"{WANDB.LOGS.VAL}_{key}": val_metric[key]
+                        for key in train_metric
+                    }
+                    wandb_log_dict |= {
+                        METRICS.CURRICULUM_LEVEL: val_dataset.curriculum_scheduler.get_curriculum_level()
+                    }
                     wandb.log(
-                        {
-                            f"{globals.WANDB.LOGS.VAL}_{key}": val_metric[key]
-                            for key in val_metric
-                        },
+                        wandb_log_dict,
                         step=epoch,
                     )
 

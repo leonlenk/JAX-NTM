@@ -72,6 +72,9 @@ class CurriculumSchedulerZaremba2014(CurriculumSchedulerInterface):
 
         return
 
+    def get_curriculum_level(self) -> int:
+        return super().get_curriculum_level()
+
     # TODO clean up casting of randint calls
     def get_curriculum(self, batch_size: int) -> Array:
         # select between the three distributions in Zaremba2014
