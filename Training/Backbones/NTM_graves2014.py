@@ -35,88 +35,49 @@ class LSTMTrainingConfig(TrainingConfigInterface):
 
     def __init__(self, model_config: LSTMConfig) -> None:
         self.model_config = model_config
-        self.MEMORY_SHAPE = (
-            model_config.memory_N,
-            model_config.memory_M,
-        )
-        self.MEMORY_WIDTH = (model_config.memory_N,)
         self.model, self.model_state, self.memory_model = self._init_models()
-        self._vmapped_prediction_fn = jax.vmap(
-            self._prediction_fn, in_axes=(0, 0, 0, 0, 0, None, None, None)
+        self._batched_run_model = jax.vmap(
+            self.run_model, in_axes=(None, 0, None, None)
         )
 
-    @staticmethod
-    def _prediction_fn(
-        data,
-        memory_weights,
-        read_previous,
-        write_previous,
-        read_data,
-        memory_model,
-        model_params,
-        model_state,
-    ):
-        data = jnp.concat((data, read_data), axis=-1)
-        (
-            (output, read_data, memory_weights, read_previous, write_previous),
-            variables,
-        ) = model_state.apply_fn(
-            {globals.JAX.PARAMS: model_params},
-            data,
-            memory_weights,
-            read_previous,
-            write_previous,
-            memory_model,
-            mutable=["state"],
-        )
-        return output, read_data, memory_weights, read_previous, write_previous
-
-    def _run_model(self, model_params, data, output_shape):
+    def run_model(self, model_params, data, output_shape, memory_width):
         # initial values
-        read_previous = jnp.zeros((data.shape[0],) + self.MEMORY_WIDTH).at[:, 0].set(1)
-        write_previous = jnp.zeros((data.shape[0],) + self.MEMORY_WIDTH).at[:, 0].set(1)
-        read_data = jnp.zeros((data.shape[0], self.model_config.memory_M))
-        memory_weights = jnp.zeros((data.shape[0],) + self.MEMORY_SHAPE)
+        read_previous = jnp.zeros((memory_width,)).at[0].set(1)
+        write_previous = jnp.zeros((memory_width,)).at[0].set(1)
+        memory_weights = jnp.zeros((memory_width, self.model_config.memory_M))
 
         # processing loop
-        for sequence in range(data.shape[1]):
-            output, read_data, memory_weights, read_previous, write_previous = (
-                self._vmapped_prediction_fn(
-                    data[:, sequence],
+        for sequence in range(data.shape[0]):
+            (output, memory_weights, read_previous, write_previous) = (
+                self.model_state.apply_fn(
+                    {globals.JAX.PARAMS: model_params},
+                    data[sequence],
                     memory_weights,
                     read_previous,
                     write_previous,
-                    read_data,
                     self.memory_model,
-                    model_params,
-                    self.model_state,
                 )
             )
 
         output = jnp.empty(output_shape)
-        for sequence in range(output_shape[1]):
-            (
-                sequence_output,
-                read_data,
-                memory_weights,
-                read_previous,
-                write_previous,
-            ) = self._vmapped_prediction_fn(
-                jnp.zeros_like(data[:, 0]),
-                memory_weights,
-                read_previous,
-                write_previous,
-                read_data,
-                self.memory_model,
-                model_params,
-                self.model_state,
+        for sequence in range(output_shape[0]):
+            (sequence_output, memory_weights, read_previous, write_previous) = (
+                self.model_state.apply_fn(
+                    {globals.JAX.PARAMS: model_params},
+                    jnp.zeros_like(data[0]),
+                    memory_weights,
+                    read_previous,
+                    write_previous,
+                    self.memory_model,
+                )
             )
-            output = output.at[:, sequence].set(sequence_output)
-        return output, ("placeholder",)
+            output = output.at[sequence].set(sequence_output)
+        return output
 
     def _init_models(
         self,
     ) -> tuple[LSTMModel, train_state.TrainState, MemoryInterface]:
+        temp_n = 2
         rng_key = jax.random.key(globals.JAX.RANDOM_SEED)
         key1, key2 = jax.random.split(rng_key, num=2)
 
@@ -124,8 +85,12 @@ class LSTMTrainingConfig(TrainingConfigInterface):
         memory_model = self.model_config.memory_class()
 
         # init read and write heads
-        read_head = [self.model_config.read_head_class(*self.MEMORY_SHAPE)]
-        write_head = [self.model_config.write_head_class(*self.MEMORY_SHAPE)]
+        read_head = [
+            self.model_config.read_head_class(temp_n, self.model_config.memory_M)
+        ]
+        write_head = [
+            self.model_config.write_head_class(temp_n, self.model_config.memory_M)
+        ]
 
         # init backbone
         model = self.model_config.backbone_class(
@@ -136,16 +101,14 @@ class LSTMTrainingConfig(TrainingConfigInterface):
             write_head,
             self.model_config.memory_M,
         )
-        init_input = jnp.ones(
-            (self.model_config.input_features + self.model_config.memory_M)
-        )
-        memory_weights = jnp.ones(self.MEMORY_SHAPE)
+        init_input = jnp.ones((self.model_config.input_features,))
+        memory_weights = jnp.ones((temp_n, self.model_config.memory_M))
         params = model.init(
             key1,
             init_input,
             memory_weights,
-            jnp.ones(self.MEMORY_WIDTH),
-            jnp.ones(self.MEMORY_WIDTH),
+            jnp.ones(temp_n),
+            jnp.ones(temp_n),
             memory_model,
         )
         model_state = train_state.TrainState.create(
@@ -196,7 +159,7 @@ if __name__ == "__main__":
     dataset_config = {globals.DATASETS.CONFIGS.CURRICULUM_SCHEDULER: curric}
     train_dataset = CopyLoader(
         batch_size=256,
-        num_batches=50,
+        num_batches=5,
         memory_depth=INPUT_SIZE,
         config=dataset_config,
     )
@@ -243,6 +206,8 @@ if __name__ == "__main__":
         checkpoint_wrapper=checkpoint_wrapper,
         # use_wandb=True,
     )
+
+    """
 
     from tqdm import tqdm
 
@@ -336,3 +301,5 @@ if __name__ == "__main__":
                 )
 
             training_config.memory_model.create_gif(loop=0, frame_duration=500)
+
+    """

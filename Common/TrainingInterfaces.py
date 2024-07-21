@@ -232,31 +232,40 @@ class TrainingConfigInterface(ABC):
     model: BackboneInterface
     model_state: TrainState
     memory_model: MemoryInterface
+    _batched_run_model: Callable
 
     @abstractmethod
     def __init__(self, model_config) -> None:
         raise NotImplementedError
 
     @abstractmethod
-    def _run_model(
-        self, model_params: core.FrozenDict, data: Array, output_shape: tuple[int, ...]
+    def run_model(
+        self,
+        model_params: core.FrozenDict,
+        data: Array,
+        output_shape: tuple[int, ...],
+        memory_width: int,
     ) -> tuple[Array, tuple[Any, ...]]:
         raise NotImplementedError
 
     def loss_fn(self, model_params, data, target, criterion):
-        output, metrics = self._run_model(model_params, data, target.shape)
-        return criterion(output, target), metrics
+        output = self._batched_run_model(
+            model_params, data, target.shape[1:], self.model_config.memory_N
+        )
+        return criterion(output, target)
 
     def train_step(self, data, target, criterion):
-        gradient_fn = jax.value_and_grad(self.loss_fn, argnums=(0), has_aux=True)
-        ((loss, (metric,)), model_grads) = gradient_fn(
+        gradient_fn = jax.value_and_grad(self.loss_fn, argnums=(0))
+        ((loss), model_grads) = gradient_fn(
             self.model_state.params, data, target, criterion
         )
         self.model_state = self.model_state.apply_gradients(grads=model_grads)
         return {globals.METRICS.LOSS: loss}
 
     def val_step(self, data, target, criterion):
-        output, (metric,) = self._run_model(self.model_state.params, data, target.shape)
+        output = self._batched_run_model(
+            self.model_state.params, data, target.shape[1:], self.model_config.memory_N
+        )
         return {globals.METRICS.ACCURACY: criterion(output, target)}
 
     @abstractmethod

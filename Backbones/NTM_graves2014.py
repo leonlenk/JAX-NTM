@@ -57,7 +57,7 @@ class LSTMModel(BackboneInterface):
             )(dense_input)
         )
 
-        return (output, read_data, memory_weights, read_locations, write_locations)
+        return (output, memory_weights, read_locations, write_locations)
 
     def get_metadata(self) -> dict:
         return {

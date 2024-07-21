@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from functools import partial
 from typing import Callable, Type
 
 import jax
@@ -37,97 +36,73 @@ class TransformerTrainingConfig(TrainingConfigInterface):
 
     def __init__(self, model_config: TransformerConfig) -> None:
         self.model_config = model_config
-        self.MEMORY_SHAPE = (
-            model_config.num_layers,
-            model_config.memory_N,
-            model_config.memory_M,
-        )
-        self.SINGLE_MEMORY_SHAPE = (
-            model_config.memory_N,
-            model_config.memory_M,
-        )
-        self.CONTROLLER_PREVIOUS_SHAPE = (
-            model_config.num_layers,
-            model_config.memory_N,
-        )
         self.model, self.model_state, self.memory_model = self._init_models()
-
-    @staticmethod
-    @partial(jax.vmap, in_axes=(0, 0, 0, 0, None, None, None))
-    def _prediction_fn(
-        data,
-        memory_weights,
-        read_previous,
-        write_previous,
-        memory_model,
-        model_params,
-        model_state,
-    ):
-        (
-            output,
-            memory_weights,
-            read_previous,
-            write_previous,
-        ) = model_state.apply_fn(
-            {globals.JAX.PARAMS: model_params},
-            data,
-            memory_weights,
-            read_previous,
-            write_previous,
-            memory_model,
+        self._batched_run_model = jax.vmap(
+            self.run_model, in_axes=(None, 0, None, None)
         )
-        return output, memory_weights, read_previous, write_previous
 
-    def _run_model(self, model_params, data, output_shape):
+    def run_model(self, model_params, data, output_shape, memory_width):
         # initial values
         read_previous = (
-            jnp.zeros((data.shape[0],) + self.CONTROLLER_PREVIOUS_SHAPE)
-            .at[:, :, 0]
-            .set(1)
+            jnp.zeros((model_config.num_layers, memory_width)).at[:, 0].set(1)
         )
         write_previous = (
-            jnp.zeros((data.shape[0],) + self.CONTROLLER_PREVIOUS_SHAPE)
-            .at[:, :, 0]
-            .set(1)
+            jnp.zeros((model_config.num_layers, memory_width)).at[:, 0].set(1)
         )
-        memory_weights = jnp.zeros((data.shape[0],) + self.MEMORY_SHAPE)
+        memory_weights = jnp.zeros(
+            (model_config.num_layers, memory_width, model_config.memory_M)
+        )
 
         # processing loop
-        for sequence in range(1, data.shape[1] + 1):
-            output, memory_weights, read_previous, write_previous = self._prediction_fn(
-                data[:, :sequence],
+        for sequence in range(1, data.shape[0] + 1):
+            (
+                output,
+                memory_weights,
+                read_previous,
+                write_previous,
+            ) = self.model_state.apply_fn(
+                {globals.JAX.PARAMS: model_params},
+                data[:sequence],
                 memory_weights,
                 read_previous,
                 write_previous,
                 self.memory_model,
-                model_params,
-                self.model_state,
             )
 
         # prediciton loop
         output = jnp.empty(output_shape)
-        for sequence in range(output_shape[1] + 1):
+        for sequence in range(output_shape[0]):
             (
                 sequence_output,
                 memory_weights,
                 read_previous,
                 write_previous,
-            ) = self._prediction_fn(
+            ) = self.model_state.apply_fn(
+                {globals.JAX.PARAMS: model_params},
                 data,
                 memory_weights,
                 read_previous,
                 write_previous,
                 self.memory_model,
-                model_params,
-                self.model_state,
             )
-            data = jnp.concat((data, sequence_output), axis=1)
-            output = output.at[:, sequence].set(sequence_output[:, -1])
-        return output, ("placeholder",)
+            data = jnp.concat((data, sequence_output), axis=0)
+            output = output.at[sequence].set(sequence_output[-1])
+        return output
 
     def _init_models(
         self,
     ) -> tuple[TransformerModel, train_state.TrainState, MemoryInterface]:
+        temp_n = 2
+        MEMORY_SHAPE = (
+            model_config.num_layers,
+            temp_n,
+            model_config.memory_M,
+        )
+        SINGLE_MEMORY_SHAPE = (
+            temp_n,
+            model_config.memory_M,
+        )
+
         key1, key2, self.model_config.prng_key = jax.random.split(
             self.model_config.prng_key, num=3
         )
@@ -137,11 +112,11 @@ class TransformerTrainingConfig(TrainingConfigInterface):
 
         # init read and write heads
         read_heads = [
-            self.model_config.read_head_class(*self.SINGLE_MEMORY_SHAPE)
+            self.model_config.read_head_class(*SINGLE_MEMORY_SHAPE)
             for _ in range(self.model_config.num_layers)
         ]
         write_heads = [
-            self.model_config.write_head_class(*self.SINGLE_MEMORY_SHAPE)
+            self.model_config.write_head_class(*SINGLE_MEMORY_SHAPE)
             for _ in range(self.model_config.num_layers)
         ]
 
@@ -157,9 +132,9 @@ class TransformerTrainingConfig(TrainingConfigInterface):
             dim_ff=self.model_config.dim_ff,
         )
 
-        memory_weights = jnp.zeros(self.MEMORY_SHAPE)
-        read_previous = jnp.ones(self.CONTROLLER_PREVIOUS_SHAPE)
-        write_previous = jnp.ones(self.CONTROLLER_PREVIOUS_SHAPE)
+        memory_weights = jnp.zeros(MEMORY_SHAPE)
+        read_previous = jnp.ones((model_config.num_layers, temp_n))
+        write_previous = jnp.ones((model_config.num_layers, temp_n))
         init_input = jnp.ones((2, self.model_config.dim_model))
 
         params = model.init(
@@ -189,7 +164,7 @@ if __name__ == "__main__":
     from Training.Curriculum_zaremba2014 import CurriculumSchedulerZaremba2014
     from Training.training_loop import train
 
-    MEMORY_DEPTH = 8
+    MEMORY_DEPTH = 9
     INPUT_SIZE = 8
 
     model_config = TransformerConfig(
@@ -202,7 +177,7 @@ if __name__ == "__main__":
         write_head_class=NTMWriteController,
         memory_M=MEMORY_DEPTH,
         memory_N=10,
-        num_layers=4,
+        num_layers=2,
         dim_model=INPUT_SIZE,
         num_heads=4,
         dim_ff=250,
@@ -213,7 +188,7 @@ if __name__ == "__main__":
     curriculum_config = {
         CURRICULUM.CONFIGS.ACCURACY_THRESHOLD: 0.9,
         CURRICULUM.CONFIGS.MIN: 2,
-        CURRICULUM.CONFIGS.MAX: 10,
+        CURRICULUM.CONFIGS.MAX: 4,
         CURRICULUM.CONFIGS.ZAREMBA2014.P1: 0.10,
         CURRICULUM.CONFIGS.ZAREMBA2014.P2: 0.25,
         CURRICULUM.CONFIGS.ZAREMBA2014.P3: 0.65,
@@ -222,7 +197,7 @@ if __name__ == "__main__":
     dataset_config = {globals.DATASETS.CONFIGS.CURRICULUM_SCHEDULER: curric}
     train_dataset = CopyLoader(
         batch_size=256,
-        num_batches=50,
+        num_batches=5,
         memory_depth=INPUT_SIZE,
         config=dataset_config,
     )
@@ -268,6 +243,8 @@ if __name__ == "__main__":
         wandb_tags=[globals.WANDB.TAGS.CODE_TESTING],
         checkpoint_wrapper=checkpoint_wrapper,
     )
+
+    """
 
     from tqdm import tqdm
 
@@ -365,3 +342,4 @@ if __name__ == "__main__":
                 )
 
             training_config.memory_model.create_gif(loop=0, frame_duration=500)
+        """
