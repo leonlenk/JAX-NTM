@@ -125,20 +125,22 @@ class VocabularyEncoder(DataEncoderInterface):
 class BabiLoader(DataloaderInterface):
     """Dataloader for the Facebook bAbI tasks https://arxiv.org/abs/1502.05698
 
-    Expected config keys:
-        DATASETS.CONFIGS.SPLIT
-            value should be either DATASETS.BABI.SPLITS.TRAIN or DATASETS.BABI.SPLITS.TEST
-            can be updated later with update_split
+    Expected options keys:
         DATASETS.BABI.CONFIGS.SET
             value should be in DATASETS.BABI.SETS
     """
 
     def update_curriculum_level(self, curriculum_params: dict):
-        self.curriculum_scheduler.update_curriculum_level(curriculum_params)
+        self.config.curriculum_scheduler.update_curriculum_level(curriculum_params)
 
     # TODO is this the right criterion to use?
     def criterion(self, predictions, targets):
         return jnp.mean(optax.losses.l2_loss(predictions, targets))
+
+    def accuracy_metric(self, predictions, targets):
+        return jnp.mean(
+            jnp.isclose(predictions, targets, atol=self.config.accuracy_tolerance)
+        )
 
     def update_batch_params(
         self, batch_size: int | None = None, num_batches: int | None = None
@@ -155,8 +157,7 @@ class BabiLoader(DataloaderInterface):
         pass
 
     def update_split(self, new_split: str):
-        self.split = new_split
-        self.config[DATASETS.CONFIGS.SPLIT] = self.split
+        self.config.split = new_split
         self.initialize_dataset()
         pass
 
@@ -173,7 +174,14 @@ class BabiLoader(DataloaderInterface):
         self.iterations += 1
 
         # get the curriculum levels for each item in the batch
-        curriculum = self.curriculum_scheduler.get_curriculum(self.batch_size)
+        if self.config.single_level:
+            curriculum = jnp.repeat(
+                self.config.curriculum_scheduler.get_curriculum(1), self.batch_size
+            )
+        else:
+            curriculum = self.config.curriculum_scheduler.get_curriculum(
+                self.batch_size
+            )
 
         # get a random story index for each curriculum level
         self.prng, subkey = jax.random.split(self.prng)
@@ -186,7 +194,7 @@ class BabiLoader(DataloaderInterface):
             assert c > 0 and c < max(
                 DATASETS.BABI.TASKS.TASKS
             ), f"Curriculum level {c} is not in [0,{max(DATASETS.BABI.TASKS.TASKS)}]"
-            story = self.data[self.split][c.item()][str(i.item())]
+            story = self.data[self.config.split][c.item()][str(i.item())]
             story_list.append(story)
 
         # find the largest story length and pad the rest of the stories with zeros
@@ -203,10 +211,7 @@ class BabiLoader(DataloaderInterface):
         return stories[:, 0], stories[:, 1]
 
     def initialize_dataset(self):
-        self.split: str = self.config.get(
-            DATASETS.CONFIGS.SPLIT, DATASETS.BABI.SPLITS.TRAIN
-        )
-        self.set = self.config.get(DATASETS.BABI.CONFIGS.SET, DATASETS.BABI.SETS.EN)
+        self.set = self.options.get(DATASETS.BABI.CONFIGS.SET, DATASETS.BABI.SETS.EN)
 
         # location of the bAbI dataset i.e. Datasets/cache/bAbI/
         self.dataset_path = os.path.join(self.cache_dir, DATASETS.BABI.NAME)
@@ -225,7 +230,7 @@ class BabiLoader(DataloaderInterface):
 
         # initialize the data encoder
         encoder_config = {DATASETS.ENCODERS.CONFIGS.CACHE_DIR: self.set_cache_path}
-        self.data_encoder.initialize(encoder_config)
+        self.config.data_encoder.initialize(encoder_config)
 
         # create the dataset
         self.create_dataset()
@@ -262,7 +267,7 @@ class BabiLoader(DataloaderInterface):
         # flag to determine if vocabulary cache needs to be updated
         update_encoder = False
 
-        for split in [DATASETS.BABI.SPLITS.TRAIN, DATASETS.BABI.SPLITS.TEST]:
+        for split in [DATASETS.SPLITS.TRAIN, DATASETS.SPLITS.TEST]:
             self.data[split] = {}
             for task in DATASETS.BABI.TASKS.TASKS:
                 task_id = DATASETS.BABI.TASKS.ID[task]
@@ -296,7 +301,7 @@ class BabiLoader(DataloaderInterface):
                     update_encoder = True
 
         if update_encoder:
-            self.data_encoder.save()
+            self.config.data_encoder.save()
 
     def read_task(self, task_path: str) -> tuple[dict[str, jax.Array], int]:
         """Reads in all the stories in a task
@@ -335,7 +340,9 @@ class BabiLoader(DataloaderInterface):
                 if index != next_index:
                     next_index = index
                     # encode the entire story (a list of lists containing [words, answer, evidence] into a jax array)
-                    task[str(story_count)] = self.data_encoder.encode(current_story)
+                    task[str(story_count)] = self.config.data_encoder.encode(
+                        current_story
+                    )
                     current_story = []
                     story_count += 1
 
@@ -359,6 +366,7 @@ class BabiLoader(DataloaderInterface):
 
 if __name__ == "__main__":
     from Common.globals import CURRICULUM
+    from Common.TrainingInterfaces import DataloaderConfig
     from Training.Curriculum_zaremba2014 import CurriculumSchedulerZaremba2014
 
     curric_config = {
@@ -375,15 +383,17 @@ if __name__ == "__main__":
     memory_depth = 16
 
     encoder = VocabularyEncoder(memory_depth)
-    config = {
-        DATASETS.CONFIGS.CURRICULUM_SCHEDULER: CurriculumSchedulerZaremba2014(
-            curric_config
-        ),
-        DATASETS.CONFIGS.DATA_ENCODER: encoder,
+    options = {
         DATASETS.BABI.CONFIGS.SET: DATASETS.BABI.SETS.EN,
     }
+    config = DataloaderConfig(
+        curriculum_scheduler=CurriculumSchedulerZaremba2014(curric_config),
+        data_encoder=encoder,
+    )
 
-    babi_loader = BabiLoader(batch_size, num_batches, memory_depth, config=config)
+    babi_loader = BabiLoader(
+        batch_size, num_batches, memory_depth, config=config, options=options
+    )
 
     # print(f'{encoder.words_to_values=}')
 

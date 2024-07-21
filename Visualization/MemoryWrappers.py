@@ -411,7 +411,7 @@ if __name__ == "__main__":
         ),
     }
 
-    copy_loader = CopyLoader(batch_size, num_batches, memory_depth, config=config)
+    copy_loader = CopyLoader(batch_size, num_batches, memory_depth, options=config)
 
     data_batch, target_batch = copy_loader.__next__()
 

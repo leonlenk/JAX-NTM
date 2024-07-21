@@ -25,6 +25,9 @@ class METADATA:
     CONFIG = "config"
     MEMORY_DEPTH = "memory_depth"
     MEMORY_LENGTH = "memory_length"
+    SPLIT = "split"
+    SINGLE_CURR_PER_BATCH = "single_curriculum_level_per_batch"
+    ACCURACY_TOLERANCE = "accuracy_tolerance"
 
     # TODO add other components
     class COMPONENTS:
@@ -121,10 +124,12 @@ class DATASETS:
     CACHE_LOCATION = "Datasets/cache"
     CACHE_EXTENSION = ".npz"
 
-    class CONFIGS:
-        CURRICULUM_SCHEDULER = "curriculum_scheduler"
-        DATA_ENCODER = "data_encoder"
-        SPLIT = "split"
+    DEFAULT_ACCURACY_TOLERANCE = 1e-2
+
+    class SPLITS:
+        TRAIN = "train"
+        VAL = "val"
+        TEST = "test"
 
     class ENCODERS:
         VOCABULARY = "vocabulary"
@@ -138,10 +143,6 @@ class DATASETS:
         CACHE = "cache"
         DATA_EXTENSION = ".txt"
         PUNCTUATION_MARKS = [".", "?", ","]
-
-        class SPLITS:
-            TEST = "test"
-            TRAIN = "train"
 
         class CONFIGS:
             SET = "set"

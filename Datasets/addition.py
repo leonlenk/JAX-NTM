@@ -12,7 +12,7 @@ from Common.TrainingInterfaces import DataloaderInterface
 
 
 class BinaryAdditionLoader(DataloaderInterface):
-    """Returns an input and a target, both of size (batch_size, memory_depth, 2 * (max_curriculum_level + 1)).
+    """Returns an input and a target, both of size (batch_size, memory_depth, 2 * (curriculum_level + 1)).
     The addition problem will be composed of two numbers (the augend and the addend)
         These are randomly selected from [0,2^curriculum_level)
     The first element of each memory location will be 1s and 0s representing the number in binary.
@@ -20,7 +20,7 @@ class BinaryAdditionLoader(DataloaderInterface):
         The first 3 values in their memory locations will be (0,1,0,...) and (0,0,1,...) respectively.
     Aside from this, all values in the array will be zero.
 
-    The target will be of length (2 * max_curriculum_level) + 1.
+    The target will be of length (2 * curriculum_level) + 1.
         The sum of the two numbers will be encoded in the same way and right-aligned.
 
     Example:
@@ -67,11 +67,16 @@ class BinaryAdditionLoader(DataloaderInterface):
     """
 
     def update_curriculum_level(self, curriculum_params: dict):
-        self.curriculum_scheduler.update_curriculum_level(curriculum_params)
+        self.config.curriculum_scheduler.update_curriculum_level(curriculum_params)
 
     # TODO is this the right criterion to use?
     def criterion(self, predictions, targets):
         return jnp.mean(optax.losses.l2_loss(predictions, targets))
+
+    def accuracy_metric(self, predictions, targets):
+        return jnp.mean(
+            jnp.isclose(predictions, targets, atol=self.config.accuracy_tolerance)
+        )
 
     def update_split(self, new_split: str):
         pass
@@ -82,7 +87,14 @@ class BinaryAdditionLoader(DataloaderInterface):
         self.iterations += 1
 
         # get the curriculum levels for each item in the batch
-        curriculum = self.curriculum_scheduler.get_curriculum(self.batch_size)
+        if self.config.single_level:
+            curriculum = jnp.repeat(
+                self.config.curriculum_scheduler.get_curriculum(1), self.batch_size
+            )
+        else:
+            curriculum = self.config.curriculum_scheduler.get_curriculum(
+                self.batch_size
+            )
 
         # create the full size matrix of zeros for the data and target
         max_curriculum_level = jnp.max(curriculum)
@@ -135,7 +147,8 @@ class BinaryAdditionLoader(DataloaderInterface):
 
 
 if __name__ == "__main__":
-    from Common.globals import CURRICULUM, DATASETS, METRICS
+    from Common.globals import CURRICULUM, METRICS
+    from Common.TrainingInterfaces import DataloaderConfig
     from Training.Curriculum_zaremba2014 import CurriculumSchedulerZaremba2014
 
     curric_config = {
@@ -151,12 +164,9 @@ if __name__ == "__main__":
     num_batches = 1
     memory_depth = 6
 
-    config = {
-        DATASETS.CONFIGS.CURRICULUM_SCHEDULER: CurriculumSchedulerZaremba2014(
-            curric_config
-        ),
-    }
-
+    config = DataloaderConfig(
+        curriculum_scheduler=CurriculumSchedulerZaremba2014(curric_config)
+    )
     add_loader = BinaryAdditionLoader(
         batch_size, num_batches, memory_depth, config=config
     )

@@ -183,6 +183,7 @@ class TransformerTrainingConfig(TrainingConfigInterface):
 if __name__ == "__main__":
     from Common.Checkpoint import CheckpointWrapper, TrainingMetadata
     from Common.globals import CURRICULUM, METADATA
+    from Common.TrainingInterfaces import DataloaderConfig
     from Controllers.NTM_graves2014 import NTMReadController, NTMWriteController
     from Datasets.copy import CopyLoader
     from Memories.NTM_graves2014 import NTMMemory
@@ -219,7 +220,7 @@ if __name__ == "__main__":
         CURRICULUM.CONFIGS.ZAREMBA2014.P3: 0.65,
     }
     curric = CurriculumSchedulerZaremba2014(curriculum_config)
-    dataset_config = {globals.DATASETS.CONFIGS.CURRICULUM_SCHEDULER: curric}
+    dataset_config = DataloaderConfig(curriculum_scheduler=curric)
     train_dataset = CopyLoader(
         batch_size=256,
         num_batches=50,
@@ -289,7 +290,7 @@ if __name__ == "__main__":
         CURRICULUM.CONFIGS.ZAREMBA2014.P3: 0,
     }
     curric = CurriculumSchedulerZaremba2014(curriculum_config)
-    dataset_config = {globals.DATASETS.CONFIGS.CURRICULUM_SCHEDULER: curric}
+    dataset_config = DataloaderConfig(curriculum_scheduler=curric)
     test_dataset = CopyLoader(
         batch_size=1,
         num_batches=10,

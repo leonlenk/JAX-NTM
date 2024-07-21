@@ -15,7 +15,6 @@ class CopyLoader(DataloaderInterface):
 
     This is implemented by first creating the full size array and then zeroing out each section.
 
-    # TODO update example to new curriculum level strategy (one level for whole batch, not item by item)
     Example:
         batch_size = 3
         memory_depth = 6
@@ -28,14 +27,14 @@ class CopyLoader(DataloaderInterface):
                 ],
                 [                   # second batch
                 [1, 0, 0, 1, 0, 0],
+                [0, 0, 1, 0, 0, 0]
                 [0, 0, 0, 0, 0, 1], # delimiter
-                [0, 0, 0, 0, 0, 0]
                 ],
                 [                   # third batch
                 [1, 0, 1, 0, 0, 0],
                 [1, 0, 1, 1, 0, 0],
                 [0, 0, 0, 0, 0, 1]  # delimiter
-                ]], dtype=int32)
+                ]], dtype=float32)
 
         target =    Array([
                 [
@@ -45,25 +44,27 @@ class CopyLoader(DataloaderInterface):
                 ],
                 [
                 [1, 0, 0, 1, 0, 0],
-                [0, 0, 0, 0, 0, 0],
+                [0, 0, 1, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0]
                 ],
                 [
                 [1, 0, 1, 0, 0, 0],
                 [1, 0, 1, 1, 0, 0],
                 [0, 0, 0, 0, 0, 0]
-                ]], dtype=int32)
+                ]], dtype=float32)
     """
 
     def update_curriculum_level(self, curriculum_params: dict):
-        self.curriculum_scheduler.update_curriculum_level(curriculum_params)
+        self.config.curriculum_scheduler.update_curriculum_level(curriculum_params)
 
     def criterion(self, predictions, targets):
         return jnp.mean(optax.losses.l2_loss(predictions, targets))
         # return jnp.mean(jnp.abs(predictions - targets))  # mean absolute error (l1) loss
 
     def accuracy_metric(self, predictions, targets):
-        return jnp.mean(jnp.isclose(predictions, targets))
+        return jnp.mean(
+            jnp.isclose(predictions, targets, atol=self.config.accuracy_tolerance)
+        )
 
     def update_split(self, new_split: str):
         pass
@@ -74,11 +75,14 @@ class CopyLoader(DataloaderInterface):
         self.iterations += 1
 
         # get the curriculum levels for each item in the batch
-        # TODO make the original curriculum strategy (different level for each item in batch) an option
-        # curriculum = self.curriculum_scheduler.get_curriculum(self.batch_size)
-        curriculum = jnp.repeat(
-            self.curriculum_scheduler.get_curriculum(1), self.batch_size
-        )
+        if self.config.single_level:
+            curriculum = jnp.repeat(
+                self.config.curriculum_scheduler.get_curriculum(1), self.batch_size
+            )
+        else:
+            curriculum = self.config.curriculum_scheduler.get_curriculum(
+                self.batch_size
+            )
 
         # create the full matrix
         self.prng, subkey = jax.random.split(self.prng)
@@ -107,7 +111,8 @@ class CopyLoader(DataloaderInterface):
 
 
 if __name__ == "__main__":
-    from Common.globals import CURRICULUM, DATASETS, METRICS
+    from Common.globals import CURRICULUM, METRICS
+    from Common.TrainingInterfaces import DataloaderConfig
     from Training.Curriculum_zaremba2014 import CurriculumSchedulerZaremba2014
 
     curric_config = {
@@ -123,12 +128,9 @@ if __name__ == "__main__":
     num_batches = 1
     memory_depth = 6
 
-    config = {
-        DATASETS.CONFIGS.CURRICULUM_SCHEDULER: CurriculumSchedulerZaremba2014(
-            curric_config
-        ),
-    }
-
+    config = DataloaderConfig(
+        curriculum_scheduler=CurriculumSchedulerZaremba2014(curric_config)
+    )
     copy_loader = CopyLoader(batch_size, num_batches, memory_depth, config=config)
 
     for data, target in copy_loader:
