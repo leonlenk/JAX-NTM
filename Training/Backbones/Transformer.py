@@ -212,8 +212,8 @@ if __name__ == "__main__":
 
     curriculum_config = {
         CURRICULUM.CONFIGS.ACCURACY_THRESHOLD: 0.9,
-        CURRICULUM.CONFIGS.MIN: 3,
-        CURRICULUM.CONFIGS.MAX: 3,
+        CURRICULUM.CONFIGS.MIN: 2,
+        CURRICULUM.CONFIGS.MAX: 10,
         CURRICULUM.CONFIGS.ZAREMBA2014.P1: 0.10,
         CURRICULUM.CONFIGS.ZAREMBA2014.P2: 0.25,
         CURRICULUM.CONFIGS.ZAREMBA2014.P3: 0.65,
@@ -262,9 +262,106 @@ if __name__ == "__main__":
         project_name=globals.WANDB.PROJECTS.CODE_TESTING,
         training_config=training_config,
         training_metadata=training_metadata,
-        num_epochs=5,
+        num_epochs=1,
         train_dataset=train_dataset,
         val_dataset=val_dataset,
         wandb_tags=[globals.WANDB.TAGS.CODE_TESTING],
         checkpoint_wrapper=checkpoint_wrapper,
     )
+
+    from tqdm import tqdm
+
+    from Visualization.MemoryWrappers import SequentialInferenceMemoryVisualizer
+
+    training_config.memory_model = SequentialInferenceMemoryVisualizer(
+        training_config.memory_model,
+        save_dir="Transformer_copy_test",
+        delete_existing=True,
+        pixel_scale=64,
+    )
+
+    curriculum_config = {
+        CURRICULUM.CONFIGS.ACCURACY_THRESHOLD: 0.9,
+        CURRICULUM.CONFIGS.MIN: 2,
+        CURRICULUM.CONFIGS.MAX: 20,
+        CURRICULUM.CONFIGS.ZAREMBA2014.P1: 1,
+        CURRICULUM.CONFIGS.ZAREMBA2014.P2: 0,
+        CURRICULUM.CONFIGS.ZAREMBA2014.P3: 0,
+    }
+    curric = CurriculumSchedulerZaremba2014(curriculum_config)
+    dataset_config = {globals.DATASETS.CONFIGS.CURRICULUM_SCHEDULER: curric}
+    test_dataset = CopyLoader(
+        batch_size=1,
+        num_batches=10,
+        memory_depth=INPUT_SIZE,
+        config=dataset_config,
+    )
+
+    with tqdm(test_dataset) as pbar:
+        pbar.set_description("Visualization")
+        for data_batch, target_batch in pbar:
+            # get a single item from the batch
+            data = data_batch.at[0].get()
+            target = target_batch.at[0].get()
+
+            TEST_MEMORY_WIDTH = data.shape[0] + 1
+
+            training_config.memory_model.set_up_inference(
+                data, target, TEST_MEMORY_WIDTH, MEMORY_DEPTH
+            )
+
+            # initial state (without batch dimension)
+            read_previous = (
+                jnp.zeros((model_config.num_layers, TEST_MEMORY_WIDTH)).at[:, 0].set(1)
+            )
+            write_previous = (
+                jnp.zeros((model_config.num_layers, TEST_MEMORY_WIDTH)).at[:, 0].set(1)
+            )
+            memory_weights = jnp.zeros(
+                (model_config.num_layers, TEST_MEMORY_WIDTH, MEMORY_DEPTH)
+            )
+
+            # processing loop
+            for sequence in range(1, data.shape[0] + 1):
+                training_config.memory_model.update_step(
+                    input_index=sequence - 1, output_index=None
+                )
+
+                output, memory_weights, read_previous, write_previous = (
+                    training_config._prediction_fn(
+                        data[:sequence],
+                        memory_weights,
+                        read_previous,
+                        write_previous,
+                        training_config.memory_model,
+                        training_config.model_state.params,
+                        training_config.model_state,
+                    )
+                )
+            for sequence in range(data.shape[0] + 1):
+                training_config.memory_model.update_step(
+                    input_index=None, output_index=sequence
+                )
+
+                (
+                    sequence_output,
+                    memory_weights,
+                    read_previous,
+                    write_previous,
+                ) = training_config._prediction_fn(
+                    data,
+                    memory_weights,
+                    read_previous,
+                    write_previous,
+                    training_config.memory_model,
+                    training_config.model_state.params,
+                    training_config.model_state,
+                )
+
+                data = jnp.concat((data, sequence_output), axis=0)
+
+                training_config.memory_model.add_output(
+                    sequence_output, sequence, memory_weights[0]
+                )
+
+            training_config.memory_model.create_gif(loop=0, frame_duration=500)

@@ -156,6 +156,8 @@ class BabiLoader(DataloaderInterface):
 
     def update_split(self, new_split: str):
         self.split = new_split
+        self.config[DATASETS.CONFIGS.SPLIT] = self.split
+        self.initialize_dataset()
         pass
 
     # TODO is randomly selecting examples from each task each time desirable?

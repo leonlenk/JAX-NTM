@@ -255,22 +255,41 @@ if __name__ == "__main__":
         pixel_scale=64,
     )
 
-    with tqdm(val_dataset) as pbar:
+    curriculum_config = {
+        CURRICULUM.CONFIGS.ACCURACY_THRESHOLD: 0.9,
+        CURRICULUM.CONFIGS.MIN: 2,
+        CURRICULUM.CONFIGS.MAX: 20,
+        CURRICULUM.CONFIGS.ZAREMBA2014.P1: 1,
+        CURRICULUM.CONFIGS.ZAREMBA2014.P2: 0,
+        CURRICULUM.CONFIGS.ZAREMBA2014.P3: 0,
+    }
+    curric = CurriculumSchedulerZaremba2014(curriculum_config)
+    dataset_config = {globals.DATASETS.CONFIGS.CURRICULUM_SCHEDULER: curric}
+    test_dataset = CopyLoader(
+        batch_size=1,
+        num_batches=10,
+        memory_depth=INPUT_SIZE,
+        config=dataset_config,
+    )
+
+    with tqdm(test_dataset) as pbar:
         pbar.set_description("Visualization")
         for data_batch, target_batch in pbar:
             # get a single item from the batch
             data = data_batch.at[0].get()
             target = target_batch.at[0].get()
 
+            TEST_MEMORY_WIDTH = data.shape[0] + 1
+
             training_config.memory_model.set_up_inference(
-                data, target, MEMORY_WIDTH, MEMORY_DEPTH
+                data, target, TEST_MEMORY_WIDTH, MEMORY_DEPTH
             )
 
             # initial state (without batch dimension)
-            read_previous = jnp.zeros(MEMORY_WIDTH).at[0].set(1)
-            write_previous = jnp.zeros(MEMORY_WIDTH).at[0].set(1)
+            read_previous = jnp.zeros(TEST_MEMORY_WIDTH).at[0].set(1)
+            write_previous = jnp.zeros(TEST_MEMORY_WIDTH).at[0].set(1)
             read_data = jnp.zeros(MEMORY_DEPTH)
-            memory_weights = jnp.zeros((MEMORY_WIDTH, MEMORY_DEPTH))
+            memory_weights = jnp.zeros((TEST_MEMORY_WIDTH, MEMORY_DEPTH))
 
             # processing loop
             for sequence in range(data.shape[0]):
@@ -316,4 +335,4 @@ if __name__ == "__main__":
                     sequence_output, sequence, memory_weights
                 )
 
-            training_config.memory_model.create_gif(loop=0, frame_duration=750)
+            training_config.memory_model.create_gif(loop=0, frame_duration=500)
