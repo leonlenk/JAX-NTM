@@ -132,6 +132,7 @@ class LSTMTrainingConfig(TrainingConfigInterface):
 if __name__ == "__main__":
     from Common.Checkpoint import CheckpointWrapper, TrainingMetadata
     from Common.globals import CURRICULUM, METADATA
+    from Common.TrainingInterfaces import DataloaderConfig
     from Controllers.NTM_graves2014 import NTMReadController, NTMWriteController
     from Datasets.copy import CopyLoader
     from Memories.NTM_graves2014 import NTMMemory
@@ -165,7 +166,9 @@ if __name__ == "__main__":
         CURRICULUM.CONFIGS.ZAREMBA2014.P3: 0.65,
     }
     curric = CurriculumSchedulerZaremba2014(curriculum_config)
-    dataset_config = {globals.DATASETS.CONFIGS.CURRICULUM_SCHEDULER: curric}
+    dataset_config = DataloaderConfig(
+        curriculum_scheduler=curric, accuracy_tolerance=0.1
+    )
     train_dataset = CopyLoader(
         batch_size=256,
         num_batches=5,
@@ -200,15 +203,13 @@ if __name__ == "__main__":
         TrainingConfig={str(0): training_config},
     )
 
-    checkpoint_wrapper = CheckpointWrapper(
-        "NTM_graves2014_copy_test", delete_existing=True
-    )
+    checkpoint_wrapper = CheckpointWrapper("NTM_graves2014_copy", delete_existing=True)
 
     train(
         project_name=globals.WANDB.PROJECTS.CODE_TESTING,
         training_config=training_config,
         training_metadata=training_metadata,
-        num_epochs=1,
+        num_epochs=15,
         train_dataset=train_dataset,
         val_dataset=val_dataset,
         wandb_tags=[globals.WANDB.TAGS.CODE_TESTING],
@@ -222,7 +223,7 @@ if __name__ == "__main__":
 
     training_config.memory_model = SequentialInferenceMemoryVisualizer(
         training_config.memory_model,
-        save_dir="NTM_graves2014_test",
+        save_dir="NTM_graves2014_copy",
         delete_existing=True,
         pixel_scale=64,
     )
@@ -236,7 +237,7 @@ if __name__ == "__main__":
         CURRICULUM.CONFIGS.ZAREMBA2014.P3: 0,
     }
     curric = CurriculumSchedulerZaremba2014(curriculum_config)
-    dataset_config = {globals.DATASETS.CONFIGS.CURRICULUM_SCHEDULER: curric}
+    dataset_config = DataloaderConfig(curriculum_scheduler=curric)
     test_dataset = CopyLoader(
         batch_size=1,
         num_batches=10,

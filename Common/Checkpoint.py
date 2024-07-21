@@ -189,7 +189,7 @@ if __name__ == "__main__":
         batch_size=2,
         num_batches=1,
         memory_depth=MEMORY_DEPTH,
-        config=dataset_config,
+        options=dataset_config,
     )
 
     import jax

@@ -70,7 +70,7 @@ def train(
                 f"{WANDB.LOGS.TRAIN}_{key}": train_metric[key] for key in train_metric
             }
             wandb_log_dict |= {
-                METRICS.CURRICULUM_LEVEL: train_dataset.curriculum_scheduler.get_curriculum_level()
+                METRICS.CURRICULUM_LEVEL: train_dataset.config.curriculum_scheduler.get_curriculum_level()
             }
             wandb.log(
                 wandb_log_dict,
@@ -99,7 +99,7 @@ def train(
                         f"{WANDB.LOGS.VAL}_{key}": val_metric[key] for key in val_metric
                     }
                     wandb_log_dict |= {
-                        METRICS.CURRICULUM_LEVEL: val_dataset.curriculum_scheduler.get_curriculum_level()
+                        METRICS.CURRICULUM_LEVEL: val_dataset.config.curriculum_scheduler.get_curriculum_level()
                     }
                     wandb.log(
                         wandb_log_dict,

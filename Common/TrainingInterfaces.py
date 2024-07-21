@@ -105,20 +105,43 @@ class CurriculumSchedulerInterface(ABC):
         }
 
 
+class DataloaderConfig:
+    def __init__(
+        self,
+        curriculum_scheduler: CurriculumSchedulerInterface | None = None,
+        data_encoder: DataEncoderInterface | None = None,
+        split: str = DATASETS.SPLITS.TRAIN,
+        single_level: bool = True,
+        accuracy_tolerance: float = DATASETS.DEFAULT_ACCURACY_TOLERANCE,
+    ):
+        self.curriculum_scheduler: CurriculumSchedulerInterface = (
+            curriculum_scheduler
+            if curriculum_scheduler is not None
+            else CurriculumSchedulerStub()
+        )
+        self.data_encoder: DataEncoderInterface = (
+            data_encoder if data_encoder is not None else DataEncoderStub(0)
+        )
+        self.single_level = single_level
+        self.accuracy_tolerance = accuracy_tolerance
+        self.split = split
+
+
 class DataloaderInterface(ABC):
     batch_size: int
     num_batches: int
     memory_depth: int
     seed: int = globals.JAX.RANDOM_SEED
-    config: dict = {}
+    options: dict = {}
 
     def __init__(
         self,
         batch_size: int,
         num_batches: int,
         memory_depth: int,
+        config: DataloaderConfig,
         seed: int = globals.JAX.RANDOM_SEED,
-        config: dict = {},
+        options: dict = {},
     ):
         """Initializes the dataloader.
         Runs "self.initialize_dataset" on init.
@@ -126,21 +149,16 @@ class DataloaderInterface(ABC):
         :param batch_size: number of samples per batch
         :param num_batches: number of batches in the dataset
         :param memory_depth: length of vector at each memory location
+        :param config: options general to all datasets
         :param seed: random seed for generating/ordering data
-        :param config: options custom to dataset
+        :param options: options custom to dataset
         """
         self.batch_size = batch_size
         self.num_batches = num_batches
         self.memory_depth = memory_depth
         self.prng = jax.random.key(seed)
         self.config = config
-
-        self.curriculum_scheduler: CurriculumSchedulerInterface = config.get(
-            DATASETS.CONFIGS.CURRICULUM_SCHEDULER, CurriculumSchedulerStub()
-        )
-        self.data_encoder: DataEncoderInterface = config.get(
-            DATASETS.CONFIGS.DATA_ENCODER, DataEncoderStub(0)
-        )
+        self.options = options
 
         self.iterations = 0
 
@@ -155,7 +173,7 @@ class DataloaderInterface(ABC):
 
     def initialize_dataset(self):
         """To be overridden as necessary"""
-        self.data_encoder.initialize()
+        self.config.data_encoder.initialize()
         pass
 
     def update_batch_params(
@@ -215,6 +233,9 @@ class DataloaderInterface(ABC):
             CONFIG.BATCH_SIZE: self.batch_size,
             CONFIG.NUM_BATCHES: self.num_batches,
             METADATA.MEMORY_DEPTH: self.memory_depth,
+            METADATA.SPLIT: self.config.split,
+            METADATA.SINGLE_CURR_PER_BATCH: self.config.single_level,
+            METADATA.ACCURACY_TOLERANCE: self.config.accuracy_tolerance,
             METADATA.SEED: self.seed,
         }
 
