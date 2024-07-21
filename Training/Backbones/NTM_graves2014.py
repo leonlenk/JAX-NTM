@@ -48,6 +48,7 @@ class LSTMTrainingConfig(TrainingConfigInterface):
 
         # processing loop
         for sequence in range(data.shape[0]):
+            self.memory_model.update_step(input_index=sequence, output_index=None)
             (output, memory_weights, read_previous, write_previous) = (
                 self.model_state.apply_fn(
                     {globals.JAX.PARAMS: model_params},
@@ -61,6 +62,7 @@ class LSTMTrainingConfig(TrainingConfigInterface):
 
         output = jnp.empty(output_shape)
         for sequence in range(output_shape[0]):
+            self.memory_model.update_step(input_index=None, output_index=sequence)
             (sequence_output, memory_weights, read_previous, write_previous) = (
                 self.model_state.apply_fn(
                     {globals.JAX.PARAMS: model_params},
@@ -72,6 +74,13 @@ class LSTMTrainingConfig(TrainingConfigInterface):
                 )
             )
             output = output.at[sequence].set(sequence_output)
+
+            self.memory_model.add_output(
+                output_vector=sequence_output,
+                index=sequence,
+                memory_weights=memory_weights,
+            )
+
         return output
 
     def _init_models(
@@ -199,15 +208,13 @@ if __name__ == "__main__":
         project_name=globals.WANDB.PROJECTS.CODE_TESTING,
         training_config=training_config,
         training_metadata=training_metadata,
-        num_epochs=10,
+        num_epochs=1,
         train_dataset=train_dataset,
         val_dataset=val_dataset,
         wandb_tags=[globals.WANDB.TAGS.CODE_TESTING],
         checkpoint_wrapper=checkpoint_wrapper,
         # use_wandb=True,
     )
-
-    """
 
     from tqdm import tqdm
 
@@ -250,56 +257,11 @@ if __name__ == "__main__":
                 data, target, TEST_MEMORY_WIDTH, MEMORY_DEPTH
             )
 
-            # initial state (without batch dimension)
-            read_previous = jnp.zeros(TEST_MEMORY_WIDTH).at[0].set(1)
-            write_previous = jnp.zeros(TEST_MEMORY_WIDTH).at[0].set(1)
-            read_data = jnp.zeros(MEMORY_DEPTH)
-            memory_weights = jnp.zeros((TEST_MEMORY_WIDTH, MEMORY_DEPTH))
-
-            # processing loop
-            for sequence in range(data.shape[0]):
-                training_config.memory_model.update_step(
-                    input_index=sequence, output_index=None
-                )
-
-                output, read_data, memory_weights, read_previous, write_previous = (
-                    training_config._prediction_fn(
-                        data[sequence],
-                        memory_weights,
-                        read_previous,
-                        write_previous,
-                        read_data,
-                        training_config.memory_model,
-                        training_config.model_state.params,
-                        training_config.model_state,
-                    )
-                )
-            for sequence in range(data.shape[0]):
-                training_config.memory_model.update_step(
-                    input_index=None, output_index=sequence
-                )
-
-                (
-                    sequence_output,
-                    read_data,
-                    memory_weights,
-                    read_previous,
-                    write_previous,
-                ) = training_config._prediction_fn(
-                    jnp.zeros_like(data[sequence]),
-                    memory_weights,
-                    read_previous,
-                    write_previous,
-                    read_data,
-                    training_config.memory_model,
-                    training_config.model_state.params,
-                    training_config.model_state,
-                )
-
-                training_config.memory_model.add_output(
-                    sequence_output, sequence, memory_weights
-                )
+            training_config.run_model(
+                training_config.model_state.params,
+                data,
+                target.shape,
+                TEST_MEMORY_WIDTH,
+            )
 
             training_config.memory_model.create_gif(loop=0, frame_duration=500)
-
-    """

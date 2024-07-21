@@ -8,6 +8,12 @@ from Common.globals import METADATA
 
 
 class MemoryInterface(ABC, nn.Module):
+    def update_step(self, *args, **kwargs) -> None:
+        return
+
+    def add_output(self, *args, **kwargs) -> None:
+        return
+
     @abstractmethod
     def read(self, memory_weights: Array, read_weights: Array) -> Array:
         raise NotImplementedError
