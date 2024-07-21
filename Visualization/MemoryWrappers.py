@@ -384,8 +384,9 @@ class SequentialInferenceMemoryVisualizer(MemoryInterface):
 
 
 if __name__ == "__main__":
-    from Common.globals import CURRICULUM, DATASETS
+    from Common.globals import CURRICULUM
     from Common.MemoryInterface import MemoryStub
+    from Common.TrainingInterfaces import DataloaderConfig
     from Datasets.copy import CopyLoader
     from Training.Curriculum_zaremba2014 import CurriculumSchedulerZaremba2014
 
@@ -405,13 +406,10 @@ if __name__ == "__main__":
     batch_size = 5
     num_batches = 1
 
-    config = {
-        DATASETS.CONFIGS.CURRICULUM_SCHEDULER: CurriculumSchedulerZaremba2014(
-            curric_config
-        ),
-    }
+    curric = CurriculumSchedulerZaremba2014(curric_config)
+    config = DataloaderConfig(curriculum_scheduler=curric)
 
-    copy_loader = CopyLoader(batch_size, num_batches, memory_depth, options=config)
+    copy_loader = CopyLoader(batch_size, num_batches, memory_depth, config=config)
 
     data_batch, target_batch = copy_loader.__next__()
 

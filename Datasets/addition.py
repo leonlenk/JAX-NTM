@@ -16,12 +16,13 @@ class BinaryAdditionLoader(DataloaderInterface):
     The addition problem will be composed of two numbers (the augend and the addend)
         These are randomly selected from [0,2^curriculum_level)
     The first element of each memory location will be 1s and 0s representing the number in binary.
+        these will be left-aligned and have the least significant bit come first
     There will be two extra memory locations as delimiters, one after each number.
         The first 3 values in their memory locations will be (0,1,0,...) and (0,0,1,...) respectively.
     Aside from this, all values in the array will be zero.
 
     The target will be of length (2 * curriculum_level) + 1.
-        The sum of the two numbers will be encoded in the same way and right-aligned.
+        The sum of the two numbers will be encoded in the same way.
 
     Example:
         batch_size = 2
@@ -33,8 +34,8 @@ class BinaryAdditionLoader(DataloaderInterface):
 
         data =      Array([
                 [                           # first batch
-                [1., 0., 0., 0., 0., 0.],   # 2s place
                 [1., 0., 0., 0., 0., 0.],   # 1s place
+                [1., 0., 0., 0., 0., 0.],   # 2s place
                 [0., 1., 0., 0., 0., 0.],   # first delimiter -> augend = 3
                 [0., 0., 0., 0., 0., 0.],
                 [0., 0., 0., 0., 0., 0.],
@@ -44,25 +45,25 @@ class BinaryAdditionLoader(DataloaderInterface):
                 [0., 0., 0., 0., 0., 0.],
                 [0., 0., 0., 0., 0., 0.],
                 [0., 1., 0., 0., 0., 0.],
-                [0., 0., 0., 0., 0., 0.],
                 [1., 0., 0., 0., 0., 0.],
+                [0., 0., 0., 0., 0., 0.],
                 [0., 0., 1., 0., 0., 0.]
                 ]], dtype=float32)
 
         target =    Array([
                 [                           # first batch
-                [0., 0., 0., 0., 0., 0.],
-                [0., 0., 0., 0., 0., 0.],
-                [0., 0., 0., 0., 0., 0.],
+                [1., 0., 0., 0., 0., 0.],    # 1s place
                 [1., 0., 0., 0., 0., 0.],   # 2s place
-                [1., 0., 0., 0., 0., 0.]    # 1s place
+                [0., 0., 0., 0., 0., 0.],
+                [0., 0., 0., 0., 0., 0.],
+                [0., 0., 0., 0., 0., 0.]
                 ],                          # sum = 3
                 [
+                [1., 0., 0., 0., 0., 0.],
                 [0., 0., 0., 0., 0., 0.],
                 [0., 0., 0., 0., 0., 0.],
                 [0., 0., 0., 0., 0., 0.],
-                [0., 0., 0., 0., 0., 0.],
-                [1., 0., 0., 0., 0., 0.]
+                [0., 0., 0., 0., 0., 0.]
                 ]], dtype=float32)
     """
 
@@ -111,12 +112,9 @@ class BinaryAdditionLoader(DataloaderInterface):
         self.prng, subkey = jax.random.split(self.prng)
         addends = jax.random.randint(subkey, (self.batch_size,), 0, 2**curriculum)
         sums = augends + addends
-        print(f"{augends=}")
-        print(f"{addends=}")
-        print(f"{sums=}")
 
         # loop through the batches and fill in the array
-        for i in range(batch_size):
+        for i in range(self.batch_size):
             curriculum_level = curriculum[i]
             augend = augends[i]
             addend = addends[i]
@@ -128,16 +126,16 @@ class BinaryAdditionLoader(DataloaderInterface):
 
             # fill in the augend and addend
             for j in range(curriculum_level):
-                if self.get_bit_bool(augend, curriculum_level - 1 - j):
+                if self.get_bit_bool(augend, j):
                     data = data.at[i, j, 0].set(1)
 
-                if self.get_bit_bool(addend, curriculum_level - 1 - j):
+                if self.get_bit_bool(addend, j):
                     data = data.at[i, curriculum_level + 1 + j, 0].set(1)
 
             # fill in the target
             target_length = target.shape[1]
             for j in range(target_length):
-                if self.get_bit_bool(sum, target_length - 1 - j):
+                if self.get_bit_bool(sum, j):
                     target = target.at[i, j, 0].set(1)
 
         return data, target

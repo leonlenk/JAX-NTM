@@ -72,6 +72,13 @@ class LSTMTrainingConfig(TrainingConfigInterface):
         return output, read_data, memory_weights, read_previous, write_previous
 
     def _run_model(self, model_params, data, output_shape):
+        # TODO make the memory size more generally settable
+        self.MEMORY_WIDTH = (data.shape[1] + 1,)
+        self.MEMORY_SHAPE = (
+            self.MEMORY_WIDTH[0],
+            model_config.memory_M,
+        )
+
         # initial values
         read_previous = jnp.zeros((data.shape[0],) + self.MEMORY_WIDTH).at[:, 0].set(1)
         write_previous = jnp.zeros((data.shape[0],) + self.MEMORY_WIDTH).at[:, 0].set(1)
@@ -194,7 +201,9 @@ if __name__ == "__main__":
         CURRICULUM.CONFIGS.ZAREMBA2014.P3: 0.65,
     }
     curric = CurriculumSchedulerZaremba2014(curriculum_config)
-    dataset_config = DataloaderConfig(curriculum_scheduler=curric)
+    dataset_config = DataloaderConfig(
+        curriculum_scheduler=curric, accuracy_tolerance=0.1
+    )
     train_dataset = CopyLoader(
         batch_size=256,
         num_batches=50,
@@ -229,15 +238,13 @@ if __name__ == "__main__":
         TrainingConfig={str(0): training_config},
     )
 
-    checkpoint_wrapper = CheckpointWrapper(
-        "NTM_graves2014_copy_test", delete_existing=True
-    )
+    checkpoint_wrapper = CheckpointWrapper("NTM_graves2014_copy", delete_existing=True)
 
     train(
         project_name=globals.WANDB.PROJECTS.CODE_TESTING,
         training_config=training_config,
         training_metadata=training_metadata,
-        num_epochs=10,
+        num_epochs=15,
         train_dataset=train_dataset,
         val_dataset=val_dataset,
         wandb_tags=[globals.WANDB.TAGS.CODE_TESTING],
@@ -251,7 +258,7 @@ if __name__ == "__main__":
 
     training_config.memory_model = SequentialInferenceMemoryVisualizer(
         training_config.memory_model,
-        save_dir="NTM_graves2014_test",
+        save_dir="NTM_graves2014_copy",
         delete_existing=True,
         pixel_scale=64,
     )
