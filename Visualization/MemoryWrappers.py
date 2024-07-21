@@ -13,10 +13,6 @@ from Visualization import memory_visualization
 # TODO make wrapper to plot read/write address vs time (iteration #)
 
 
-# TODO options for:
-# save location for plots?
-# selecting at what points plots should be made (read/write/address, read key)
-# annotations (title, etc) to the plots
 class SequentialInferenceMemoryVisualizer(MemoryInterface):
     """Wrapper around memory to visualize sequential inference.
 
@@ -303,7 +299,7 @@ class SequentialInferenceMemoryVisualizer(MemoryInterface):
             fill=memory_visualization.color_foreground,
         )
 
-    def add_output(self, output_vector: Array, index: int):
+    def add_output(self, output_vector: Array, index: int, memory_weights: Array):
         self.output = self.output.at[index].set(output_vector)
         self.plot_state(memory_weights)
         pass
@@ -425,7 +421,7 @@ if __name__ == "__main__":
 
     memory = MemoryStub(memory_length, memory_depth)
     memory = SequentialInferenceMemoryVisualizer(
-        memory, save_dir="seq_inf_test", delete_existing=True
+        memory, save_dir="seq_inf_test", delete_existing=True, pixel_scale=64
     )
     memory.set_up_inference(data, target, memory_length, memory_depth)
 
@@ -451,7 +447,7 @@ if __name__ == "__main__":
         memory.read(memory_weights, read_weights)
 
         if j >= curric_level:
-            memory.add_output(depth_weights, i)
+            memory.add_output(depth_weights, i, memory_weights)
 
     # memory.images[1].show()
 

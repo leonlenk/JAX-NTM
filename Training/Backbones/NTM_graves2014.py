@@ -27,6 +27,9 @@ class LSTMConfig(ModelConfigInterface):
     input_features: int
 
 
+# TODO make memory width variable (set per batch based on batch's width (curriculum level))
+
+
 class LSTMTrainingConfig(TrainingConfigInterface):
     model_config: LSTMConfig
 
@@ -164,6 +167,7 @@ if __name__ == "__main__":
     from Training.training_loop import train
 
     MEMORY_DEPTH = 12
+    MEMORY_WIDTH = 8
     INPUT_SIZE = 8
 
     model_config = LSTMConfig(
@@ -174,7 +178,7 @@ if __name__ == "__main__":
         read_head_class=NTMReadController,
         write_head_class=NTMWriteController,
         memory_M=MEMORY_DEPTH,
-        memory_N=8,
+        memory_N=MEMORY_WIDTH,
         num_layers=1,
         input_features=INPUT_SIZE,
     )
@@ -232,10 +236,84 @@ if __name__ == "__main__":
         project_name=globals.WANDB.PROJECTS.CODE_TESTING,
         training_config=training_config,
         training_metadata=training_metadata,
-        num_epochs=1,
+        num_epochs=10,
         train_dataset=train_dataset,
         val_dataset=val_dataset,
         wandb_tags=[globals.WANDB.TAGS.CODE_TESTING],
         checkpoint_wrapper=checkpoint_wrapper,
         # use_wandb=True,
     )
+
+    from tqdm import tqdm
+
+    from Visualization.MemoryWrappers import SequentialInferenceMemoryVisualizer
+
+    training_config.memory_model = SequentialInferenceMemoryVisualizer(
+        training_config.memory_model,
+        save_dir="NTM_graves2014_test",
+        delete_existing=True,
+        pixel_scale=64,
+    )
+
+    with tqdm(val_dataset) as pbar:
+        pbar.set_description("Visualization")
+        for data_batch, target_batch in pbar:
+            # get a single item from the batch
+            data = data_batch.at[0].get()
+            target = target_batch.at[0].get()
+
+            training_config.memory_model.set_up_inference(
+                data, target, MEMORY_WIDTH, MEMORY_DEPTH
+            )
+
+            # initial state (without batch dimension)
+            read_previous = jnp.zeros(MEMORY_WIDTH).at[0].set(1)
+            write_previous = jnp.zeros(MEMORY_WIDTH).at[0].set(1)
+            read_data = jnp.zeros(MEMORY_DEPTH)
+            memory_weights = jnp.zeros((MEMORY_WIDTH, MEMORY_DEPTH))
+
+            # processing loop
+            for sequence in range(data.shape[0]):
+                training_config.memory_model.update_step(
+                    input_index=sequence, output_index=None
+                )
+
+                output, read_data, memory_weights, read_previous, write_previous = (
+                    training_config._prediction_fn(
+                        data[sequence],
+                        memory_weights,
+                        read_previous,
+                        write_previous,
+                        read_data,
+                        training_config.memory_model,
+                        training_config.model_state.params,
+                        training_config.model_state,
+                    )
+                )
+            for sequence in range(data.shape[0]):
+                training_config.memory_model.update_step(
+                    input_index=None, output_index=sequence
+                )
+
+                (
+                    sequence_output,
+                    read_data,
+                    memory_weights,
+                    read_previous,
+                    write_previous,
+                ) = training_config._prediction_fn(
+                    jnp.zeros_like(data[sequence]),
+                    memory_weights,
+                    read_previous,
+                    write_previous,
+                    read_data,
+                    training_config.memory_model,
+                    training_config.model_state.params,
+                    training_config.model_state,
+                )
+
+                training_config.memory_model.add_output(
+                    sequence_output, sequence, memory_weights
+                )
+
+            training_config.memory_model.create_gif(loop=0, frame_duration=750)

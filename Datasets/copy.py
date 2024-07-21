@@ -1,5 +1,6 @@
 import jax
 import jax.numpy as jnp
+import optax
 
 from Common.TrainingInterfaces import DataloaderInterface
 
@@ -58,8 +59,8 @@ class CopyLoader(DataloaderInterface):
         self.curriculum_scheduler.update_curriculum_level(curriculum_params)
 
     def criterion(self, predictions, targets):
-        # return jnp.mean(optax.losses.l2_loss(predictions, targets))
-        return jnp.mean(jnp.abs(predictions - targets))  # mean absolute error (l1) loss
+        return jnp.mean(optax.losses.l2_loss(predictions, targets))
+        # return jnp.mean(jnp.abs(predictions - targets))  # mean absolute error (l1) loss
 
     def accuracy_metric(self, predictions, targets):
         return jnp.mean(jnp.isclose(predictions, targets))
