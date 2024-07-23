@@ -1,8 +1,6 @@
 # run with: flask --app GUI.app run --debug
 
-from flask import Flask, render_template
-
-from Training.Backbones.NTM_graves2014 import LSTMConfig
+from flask import Flask, render_template, request
 
 app = Flask(__name__)
 
@@ -19,8 +17,8 @@ def configure_models():
 
 @app.route("/submit", methods=["POST"])
 def submit():
-    LSTMConfig()
-    return "Result: asd"
+    data = request.form["learning_rate"]
+    return f"Result: {float(data)}"
 
 
 if __name__ == "__main__":

@@ -1,0 +1,25 @@
+@import url("../globals.css");
+
+.submit-btn {
+    background-color: var(--primary-color);
+    color: white;
+    padding: 15px 20px;
+    font-size: 16px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    box-shadow: 0 4px var(--primary-dark);
+    transition: all 0.3s ease;
+}
+
+.submit-btn:hover {
+    background-color: var(--primary-higlight);
+    color:black;
+}
+
+.submit-btn:active {
+    background-color: var(--primary-dark);
+    box-shadow: 0 2px var(--primary-dark);
+    transform: translateY(2px);
+    color:white;
+}
