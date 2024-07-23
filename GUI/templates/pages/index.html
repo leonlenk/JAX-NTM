@@ -1,9 +1,14 @@
-<!-- home.html -->
 {% extends "pages/base.html" %}
 
 {% block title %}Home - My Flask App{% endblock %}
 
+{% block extra_stylesheets %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='pages/index.css') }}">
+{% endblock %}
+
 {% block content %}
-<h2>Home Page</h2>
-<p>Welcome to the home page!</p>
+<div class="content-container">
+    <h1>Home Page</h1>
+    <p>Welcome to the NTM GUI!</p>
+</div>
 {% endblock %}

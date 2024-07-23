@@ -10,5 +10,10 @@ def index():
     return render_template("pages/index.html")
 
 
+@app.route("/models")
+def get_models():
+    return render_template("pages/models.html")
+
+
 if __name__ == "__main__":
     app.run(debug=True)

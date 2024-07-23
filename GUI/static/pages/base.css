@@ -1,3 +1,5 @@
+@import url('../globals.css');
+
 body {
     font-family: Arial, sans-serif;
     margin: 0;
@@ -10,8 +12,8 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background-color: #3d518c;
-    padding: 1rem;
+    background-color: var(--background-color);
+    padding: .8rem 1rem;
     position: relative;
 }
 
@@ -47,7 +49,7 @@ body {
 }
 
 .navbar .name:hover {
-    color: #ef476f;
+    color: var(--accent);
 }
 
 .navbar .nav-links {
@@ -60,7 +62,7 @@ body {
     left: 0;
     width: 0;
     height: 4px;
-    background-color: #ef476f;
+    background-color: var(--accent);
     transition: width 1s ease-in-out, transform 1s ease-in-out;;
 }
 

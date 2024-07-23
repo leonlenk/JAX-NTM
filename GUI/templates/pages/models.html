@@ -1,0 +1,63 @@
+{% extends "pages/base.html" %}
+
+{% block title %}Home - My Flask App{% endblock %}
+
+{% block extra_stylesheets %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='pages/models.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <div class="menu">
+        <div class="menu-item" onclick="showContent('content1', this)">Guide</div>
+        <div class="menu-item" onclick="showContent('content2', this)">LSTM</div>
+        <div class="menu-item" onclick="showContent('content3', this)">Transfomer</div>
+    </div>
+    <div class="content">
+        <div id="content1">
+            {% include "components/model_guide.html" %}
+        </div>
+        <div id="content2">
+            {% include "components/lstm_selector.html" %}
+        </div>
+        <div id="content3">
+            {% include "components/transformer_selector.html" %}
+        </div>
+    </div>
+
+    <script>
+        function showContent(contentId, clickedElement) {
+            // Hide all content
+            var contents = document.querySelectorAll('.content > div');
+            contents.forEach(function(content) {
+                content.classList.remove('active');
+            });
+
+            // Show the selected content
+            var selectedContent = document.getElementById(contentId);
+            if (selectedContent) {
+                selectedContent.classList.add('active');
+            }
+
+            // Remove highlight from all menu items
+            var menuItems = document.querySelectorAll('.menu-item');
+            menuItems.forEach(function(item) {
+                item.classList.remove('active');
+            });
+
+            // Highlight the clicked menu item
+            if (clickedElement) {
+                clickedElement.classList.add('active');
+            }
+        }
+
+        // Show the first content by default and highlight the first menu item
+        document.addEventListener('DOMContentLoaded', function() {
+            var firstMenuItem = document.querySelector('.menu-item');
+            if (firstMenuItem) {
+                showContent('content1', firstMenuItem);
+            }
+        });
+    </script>
+</div>
+{% endblock %}

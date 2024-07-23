@@ -1,0 +1,39 @@
+.page-container {
+    width: 100%;
+    padding: 1rem;
+    display: flex;
+}
+
+.menu {
+    width: 200px;
+    height: fit-content;
+    background-color: #f4f4f4;
+    border-right: 2px solid #ddd;
+    padding: 10px;
+    border-radius: 5%;
+}
+.menu-item {
+    cursor: pointer;
+    padding: 10px;
+    transition: background-color 0.3s ease;
+}
+
+.menu-item:hover {
+    background-color: #ddd;
+}
+
+.menu-item.active {
+    background-color: #a9d6e5; /* Highlight color for the active menu item */
+}
+
+.content {
+    flex: 1;
+    padding: 0px 20px;
+}
+.content > div {
+    display: none;
+}
+
+.content > div.active {
+    display: block;
+}
