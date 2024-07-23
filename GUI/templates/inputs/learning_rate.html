@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-stage Slider with Input</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='inputs/learning_rate.css') }}">
+</head>
+<body>
+
+<div class="container">
+    <div class="input-group">
+        <label for="numberInput">Learning Rate: </label>
+        <input type="number" id="numberInput" class="numberInput" type="number" step=".1" value="0" min="0">
+    </div>
+    <input type="range" id="multiStageSlider" class="multiStageSlider" min="1" max="701" step="1" value="0">
+</div>
+
+<script>
+    const slider = document.getElementById('multiStageSlider');
+    const numberInput = document.getElementById('numberInput');
+
+    function updateDisplayValue(value) {
+        let displayValue;
+
+        if (value <= 100) {
+            displayValue = value * 0.00000001;
+        } else if (value <= 200) {
+            displayValue = 0.000001 + (value - 100) * 0.00000009;
+        } else if (value <= 300) {
+            displayValue = 0.00001 + (value - 200) * 0.00000009;
+        } else if (value <= 400) {
+            displayValue = 0.0001 + (value - 300) * 0.0000009;
+        } else if (value <= 500) {
+            displayValue = 0.001 + (value - 400) * 0.000009;
+        } else if (value <= 600) {
+            displayValue = 0.01 + (value - 500) * 0.00009;
+        } else if (value <= 700) {
+            displayValue = 0.1 + (value - 600) * 0.0009;
+        } else {
+            displayValue = 1 + (value - 701) * 0.009;   
+        }
+
+        return displayValue;
+    }
+
+
+    slider.addEventListener('input', function() {
+        const value = parseInt(slider.value);
+        const displayValue = updateDisplayValue(value);
+
+        numberInput.value = displayValue.toExponential(2);
+        output.textContent = displayValue.toExponential(2);
+    });
+
+    numberInput.addEventListener('input', function() {
+        const inputValue = parseFloat(numberInput.value);
+        output.textContent = inputValue.toExponential(2);
+    });
+
+    // Initialize the display value
+    slider.dispatchEvent(new Event('input'));
+</script>
+
+</body>
+</html>

@@ -1,7 +1,11 @@
+@import url("../globals.css");
+
 .page-container {
     width: 100%;
     padding: 1rem;
     display: flex;
+    position: fixed;
+    overflow: hidden;
 }
 
 .menu {
@@ -12,6 +16,7 @@
     padding: 10px;
     border-radius: 5%;
 }
+
 .menu-item {
     cursor: pointer;
     padding: 10px;
@@ -23,13 +28,14 @@
 }
 
 .menu-item.active {
-    background-color: #a9d6e5; /* Highlight color for the active menu item */
+    background-color: var(--primary-higlight); /* Highlight color for the active menu item */
 }
 
 .content {
     flex: 1;
     padding: 0px 20px;
 }
+
 .content > div {
     display: none;
 }

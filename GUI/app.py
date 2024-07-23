@@ -2,6 +2,8 @@
 
 from flask import Flask, render_template
 
+from Training.Backbones.NTM_graves2014 import LSTMConfig
+
 app = Flask(__name__)
 
 
@@ -11,8 +13,14 @@ def index():
 
 
 @app.route("/models")
-def get_models():
+def configure_models():
     return render_template("pages/models.html")
+
+
+@app.route("/submit", methods=["POST"])
+def submit():
+    LSTMConfig()
+    return "Result: asd"
 
 
 if __name__ == "__main__":
