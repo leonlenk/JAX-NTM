@@ -2,6 +2,9 @@
 
 from flask import Flask, render_template, request
 
+from GUI import config_options
+from Training.Backbones.NTM_graves2014 import LSTMConfig, LSTMModel
+
 app = Flask(__name__)
 
 
@@ -12,13 +15,40 @@ def index():
 
 @app.route("/models")
 def configure_models():
-    return render_template("pages/models.html")
+    optimizers_options = config_options.OPTIMIZERS.keys()
+    memory_options = config_options.MEMORY_MODELS.keys()
+    read_controller_options = config_options.READ_CONTROLLERS.keys()
+    write_controller_options = config_options.WRITE_CONTROLLERS.keys()
+
+    return render_template(
+        "pages/models.html",
+        optimizers_options=optimizers_options,
+        memory_options=memory_options,
+        read_controller_options=read_controller_options,
+        write_controller_options=write_controller_options,
+    )
 
 
-@app.route("/submit", methods=["POST"])
-def submit():
-    data = request.form["learning_rate"]
-    return f"Result: {float(data)}"
+@app.route("/submit/lstm", methods=["POST"])
+def submit_lstm():
+    lstm_config = LSTMConfig(
+        learning_rate=float(request.form["learning_rate"]),
+        optimizer=config_options.OPTIMIZERS[request.form["optimizer"]],
+        memory_M=int(request.form["memory_m"]),
+        memory_N=int(request.form["memory_n"]),
+        memory_class=config_options.MEMORY_MODELS[request.form["memory_model"]],
+        backbone_class=LSTMModel,
+        read_head_class=config_options.READ_CONTROLLERS[
+            request.form["read_controller"]
+        ],
+        write_head_class=config_options.WRITE_CONTROLLERS[
+            request.form["write_controller"]
+        ],
+        num_layers=int(request.form["layers"]),
+        input_features=1,
+    )
+
+    return f"Result: {lstm_config}"
 
 
 if __name__ == "__main__":

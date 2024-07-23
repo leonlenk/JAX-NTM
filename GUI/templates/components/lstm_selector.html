@@ -1,4 +1,53 @@
-<form  action="{{ url_for('submit') }}" method="post">
-{% include "inputs/learning_rate.html" %}
-{% include "inputs/submit_button.html" %}
-</form>
+<head>
+    <link rel="stylesheet" href="{{ url_for('static', filename='components/selector.css') }}">
+</head>
+<body>
+    <div>
+        <form  class="selectorContainer" action="{{ url_for('submit_lstm') }}" method="post">
+        <!-- learning rate slide bar -->
+        {% include "inputs/learning_rate.html" %}
+
+        <!-- optimizer selector -->
+        {% set items = optimizers_options %}
+        {% set display_text="Optimizer:" %}
+        {% set select_name="optimizer" %}
+        {% include "inputs/drop_down.html" %}
+
+        <!-- memory selector -->
+        {% set items = memory_options %}
+        {% set display_text="Memory:" %}
+        {% set select_name="memory_model" %}
+        {% include "inputs/drop_down.html" %}
+
+        <!-- read controller selector -->
+        {% set items = read_controller_options %}
+        {% set display_text="Read Controller:" %}
+        {% set select_name="read_controller" %}
+        {% include "inputs/drop_down.html" %}
+
+        <!-- write controller selector -->
+        {% set items = write_controller_options %}
+        {% set display_text="Write Controller:" %}
+        {% set select_name="write_controller" %}
+        {% include "inputs/drop_down.html" %}
+
+        <!-- memory depth selector -->
+        {% set display_text="Memory Depth:" %}
+        {% set select_name="memory_m" %}
+        {% include "inputs/integer_entry.html" %}
+
+        <!-- memory width selector -->
+        {% set display_text="Memory Width:" %}
+        {% set select_name="memory_n" %}
+        {% include "inputs/integer_entry.html" %}
+
+        <!-- numbrt of layers selector-->
+        {% set display_text="Number of Layers:" %}
+        {% set select_name="layers" %}
+        {% include "inputs/integer_entry.html" %}
+
+        <!-- submission button -->
+        {% include "inputs/submit_button.html" %}
+        </form>
+    </div>
+</body>
