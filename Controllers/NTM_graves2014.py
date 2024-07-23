@@ -1,3 +1,4 @@
+from functools import partial
 from typing import List
 
 import jax
@@ -7,6 +8,11 @@ from flax import linen as nn
 from Common import globals
 from Common.ControllerInterface import ControllerInterface
 from Common.MemoryInterface import MemoryInterface
+
+
+def _split_cols(matrix: jax.Array, length_indices: tuple) -> List[jax.Array]:
+    """Split a 2D matrix to variable length columns."""
+    return jnp.split(matrix, length_indices, axis=-1)
 
 
 class NTMControllerTemplate(ControllerInterface, nn.Module):
@@ -60,11 +66,9 @@ class NTMReadController(NTMControllerTemplate):
             self.M_dim_memory + 5,
         )
 
-        def _split_cols(matrix: jax.Array) -> List[jax.Array]:
-            """Split a 2D matrix to variable length columns."""
-            return jnp.split(matrix, self.length_indices, axis=-1)
-
-        self._split_cols = jax.jit(_split_cols)
+        self._split_cols = jax.jit(
+            partial(_split_cols, length_indices=self.length_indices)
+        )
 
     def is_read_controller(self) -> bool:
         return True
@@ -120,11 +124,9 @@ class NTMWriteController(NTMControllerTemplate):
             2 * self.M_dim_memory + 6,
         )
 
-        def _split_cols(matrix: jax.Array) -> List[jax.Array]:
-            """Split a 2D matrix to variable length columns."""
-            return jnp.split(matrix, self.length_indices, axis=-1)
-
-        self._split_cols = jax.jit(_split_cols)
+        self._split_cols = jax.jit(
+            partial(_split_cols, length_indices=self.length_indices)
+        )
 
     def is_read_controller(self) -> bool:
         return False
