@@ -13,7 +13,7 @@ def index():
     return render_template("pages/index.html")
 
 
-@app.route("/models")
+@app.route("/training")
 def configure_models():
     optimizers_options = config_options.OPTIMIZERS.keys()
     memory_options = config_options.MEMORY_MODELS.keys()
@@ -21,7 +21,7 @@ def configure_models():
     write_controller_options = config_options.WRITE_CONTROLLERS.keys()
 
     return render_template(
-        "pages/models.html",
+        "pages/training.html",
         optimizers_options=optimizers_options,
         memory_options=memory_options,
         read_controller_options=read_controller_options,
