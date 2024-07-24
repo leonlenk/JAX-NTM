@@ -178,6 +178,9 @@ if __name__ == "__main__":
     params = model.init(
         key2, init_input, memory_weights, read_previous, write_previous, memory_model
     )  # Initialize parameters
+
+    print(f"{model.parameter_count(params)=}")
+
     model_state = train_state.TrainState.create(
         apply_fn=model.apply,
         tx=optax.adam(lr),

@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Sequence
 
+import jax
 from flax import linen as nn
 from jax import Array
 
@@ -32,6 +33,9 @@ class BackboneInterface(nn.Module, ABC):
         memory_model: MemoryInterface,
     ) -> tuple[Array, Array, Array, Array, Array]:
         raise NotImplementedError
+
+    def parameter_count(self, params):
+        return sum(x.size for x in jax.tree_util.tree_leaves(params))
 
     def get_metadata(self) -> dict:
         return {
