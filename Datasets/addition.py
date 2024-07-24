@@ -2,6 +2,7 @@ import jax
 import jax.numpy as jnp
 import optax
 
+from Common.globals import DATASETS
 from Common.TrainingInterfaces import DataloaderInterface
 
 # TODO
@@ -73,6 +74,7 @@ class BinaryAdditionLoader(DataloaderInterface):
     # TODO is this the right criterion to use?
     def criterion(self, predictions, targets):
         return jnp.mean(optax.losses.l2_loss(predictions, targets))
+        # return jnp.mean(jnp.abs(predictions - targets))  # mean absolute error (l1) loss
 
     def accuracy_metric(self, predictions, targets):
         return jnp.mean(
@@ -87,6 +89,10 @@ class BinaryAdditionLoader(DataloaderInterface):
             raise StopIteration
         self.iterations += 1
 
+        self.interleaved: bool = self.options.get(
+            DATASETS.ADD.CONFIGS.INTERLEAVED, True
+        )
+
         # get the curriculum levels for each item in the batch
         if self.config.single_level:
             curriculum = jnp.repeat(
@@ -99,9 +105,15 @@ class BinaryAdditionLoader(DataloaderInterface):
 
         # create the full size matrix of zeros for the data and target
         max_curriculum_level = jnp.max(curriculum)
-        data = jnp.zeros(
-            (self.batch_size, 2 * (max_curriculum_level + 1), self.memory_depth)
-        )
+
+        if self.interleaved:
+            data = jnp.zeros(
+                (self.batch_size, 2 * max_curriculum_level + 1, self.memory_depth)
+            )
+        else:
+            data = jnp.zeros(
+                (self.batch_size, 2 * (max_curriculum_level + 1), self.memory_depth)
+            )
         target = jnp.zeros(
             (self.batch_size, 2 * max_curriculum_level + 1, self.memory_depth)
         )
@@ -121,16 +133,25 @@ class BinaryAdditionLoader(DataloaderInterface):
             sum = sums[i]
 
             # set the delimiters
-            data = data.at[i, curriculum_level, 1].set(1)
-            data = data.at[i, 2 * curriculum_level + 1, 2].set(1)
+            if self.interleaved:
+                data = data.at[i, 2 * curriculum_level, 1].set(1)
+            else:
+                data = data.at[i, curriculum_level, 1].set(1)
+                data = data.at[i, 2 * curriculum_level + 1, 2].set(1)
 
             # fill in the augend and addend
             for j in range(curriculum_level):
                 if self.get_bit_bool(augend, j):
-                    data = data.at[i, j, 0].set(1)
+                    if self.interleaved:
+                        data = data.at[i, j * 2, 0].set(1)
+                    else:
+                        data = data.at[i, j, 0].set(1)
 
                 if self.get_bit_bool(addend, j):
-                    data = data.at[i, curriculum_level + 1 + j, 0].set(1)
+                    if self.interleaved:
+                        data = data.at[i, j * 2 + 1, 0].set(1)
+                    else:
+                        data = data.at[i, curriculum_level + 1 + j, 0].set(1)
 
             # fill in the target
             target_length = target.shape[1]

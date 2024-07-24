@@ -126,6 +126,10 @@ class DATASETS:
 
     DEFAULT_ACCURACY_TOLERANCE = 1e-2
 
+    class ADD:
+        class CONFIGS:
+            INTERLEAVED = "interleaved"
+
     class SPLITS:
         TRAIN = "train"
         VAL = "val"
