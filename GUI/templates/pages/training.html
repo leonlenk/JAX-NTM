@@ -18,7 +18,9 @@
             {% include "components/model_guide.html" %}
         </div>
         <div id="content1">
-            {% include "components/lstm_selector.html" %}
+            <form  class="formContainer" action="{{ url_for('submit_lstm') }}" method="post">
+                {% include "components/lstm_selector.html" %}
+            </form>
         </div>
         <div id="content3">
             {% include "components/transformer_selector.html" %}

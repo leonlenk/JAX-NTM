@@ -19,6 +19,8 @@ def configure_models():
     memory_options = config_options.MEMORY_MODELS.keys()
     read_controller_options = config_options.READ_CONTROLLERS.keys()
     write_controller_options = config_options.WRITE_CONTROLLERS.keys()
+    datasets = config_options.DATA_SET.keys()
+    curriculums = config_options.CURRICULUM.keys()
 
     return render_template(
         "pages/training.html",
@@ -26,6 +28,8 @@ def configure_models():
         memory_options=memory_options,
         read_controller_options=read_controller_options,
         write_controller_options=write_controller_options,
+        datasets=datasets,
+        curriculums=curriculums,
     )
 
 
@@ -47,6 +51,8 @@ def submit_lstm():
         num_layers=int(request.form["layers"]),
         input_features=1,
     )
+
+    # curriculum_config = request.form["curriculum"]
 
     return f"Result: {lstm_config}"
 

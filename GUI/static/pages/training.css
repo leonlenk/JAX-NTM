@@ -45,3 +45,8 @@
 .content > div.active {
     display: block;
 }
+
+.formContainer {
+    width: 100%;
+    height: 100%;
+}
