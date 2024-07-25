@@ -1,52 +1,56 @@
 @import url("../globals.css");
 
-.page-container {
-    width: 100%;
-    height: 100%;
-    padding: 1rem;
-    display: flex;
-    position: fixed;
-    overflow: hidden;
+.trainingContainer{
+  width: auto;
+  height: fit-content;
+  margin: 1rem 10rem;
 }
 
-.menu {
-    width: 200px;
-    height: fit-content;
-    background-color: #f4f4f4;
-    border-right: 2px solid #ddd;
-    padding: 10px;
-    border-radius: 5%;
+.accordion {
+  box-sizing: border-box;
+  cursor: pointer;
+  padding: 18px;
+  width: 100%;
+  border: none;
+  text-align: center;
+  outline: none;
+  transition: background-color 0.4s ease;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: var(--highlight);
+  margin-bottom: 5px;
+  position: relative;
+  font-weight: 800;
 }
 
-.menu-item {
-    cursor: pointer;
-    padding: 10px;
-    transition: background-color 0.3s ease;
+.active, .accordion:hover {
+  background-color: var(--dark-highlight);
 }
 
-.menu-item:hover {
-    background-color: #ddd;
+.panel {
+  padding: 0 18px;
+  display: none;
+  background-color: white;
+  overflow: hidden;
+  transition: max-height 0.4s ease-out, padding 0.4s ease-out;
+  max-height: 0;
 }
 
-.menu-item.active {
-    background-color: var(--primary-higlight); /* Highlight color for the active menu item */
+.panel.open {
+  display: block;
+  max-height: fit-content; 
+  padding: 18px;
 }
 
-.content {
-    flex: 1;
-    padding: 0 3rem;
-    overflow: auto; /* Allows scrolling if content overflows */
+.icon {
+  font-size: 20px;
+  position: absolute;
+  left: 10px;
+  transition: transform 0.2s ease;
+  transform: rotate(45deg); /* Default state rotated */
 }
 
-.content > div {
-    display: none;
-}
-
-.content > div.active {
-    display: block;
-}
-
-.formContainer {
-    width: 100%;
-    height: 100%;
+.accordion.open .icon {
+  transform: rotate(90deg); /* Rotated back to normal + when open */
 }

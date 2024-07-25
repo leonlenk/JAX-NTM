@@ -2,13 +2,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='components/selector.css') }}">
 </head>
 <body>
-    <div class="inputContainer">
-        <!-- optimizer selector -->
-        {% set items = optimizers_options %}
-        {% set display_text="Optimizer:" %}
-        {% set select_name="optimizer" %}
-        {% include "inputs/drop_down.html" %}
-
+    <div class="inputContainer" id="{{ selectorId }}">
         <!-- memory selector -->
         {% set items = memory_options %}
         {% set display_text="Memory:" %}
@@ -41,25 +35,5 @@
         {% set display_text="Number of Layers:" %}
         {% set select_name="layers" %}
         {% include "inputs/integer_entry.html" %}
-
-        <!-- learning rate slide bar -->
-        {% include "inputs/learning_rate.html" %}
-
-
-        <!-- Training Config -->
-        <!-- dataset -->
-        {% set items = datasets %}
-        {% set display_text="Dataset:" %}
-        {% set select_name="dataset" %}
-        {% include "inputs/drop_down.html" %}
-
-        <!-- cirrculum -->
-        {% set items = curriculums %}
-        {% set display_text="Curriculum:" %}
-        {% set select_name="curriculum" %}
-        {% include "inputs/drop_down.html" %}
-
-        <!-- submission button -->
-        {% include "inputs/submit_button.html" %}
     </div>
 </body>

@@ -33,8 +33,8 @@ def configure_models():
     )
 
 
-@app.route("/submit/lstm", methods=["POST"])
-def submit_lstm():
+@app.route("/submit", methods=["POST"])
+def submit():
     lstm_config = LSTMConfig(
         learning_rate=float(request.form["learning_rate"]),
         optimizer=config_options.OPTIMIZERS[request.form["optimizer"]],

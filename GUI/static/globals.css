@@ -1,4 +1,6 @@
 :root {
+    --highlight: #caf0f8;
+    --dark-highlight: #90e0ef;
     --primary-color: #3498db;
     --primary-higlight: #90e0ef;
     --primary-dark: #023e7d;

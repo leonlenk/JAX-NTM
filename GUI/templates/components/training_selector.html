@@ -1,0 +1,15 @@
+<head>
+    <link rel="stylesheet" href="{{ url_for('static', filename='components/selector.css') }}">
+</head>
+<body>
+    <div class="inputContainer" id="{{ selectorId }}">
+        <!-- optimizer selector -->
+        {% set items = optimizers_options %}
+        {% set display_text="Optimizer:" %}
+        {% set select_name="optimizer" %}
+        {% include "inputs/drop_down.html" %}
+        
+        <!-- learning rate slide bar -->
+        {% include "inputs/learning_rate.html" %}
+    </div>
+</body>

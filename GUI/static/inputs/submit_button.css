@@ -1,6 +1,10 @@
 @import url("../globals.css");
 
 .submit-btn {
+    position: absolute;
+    bottom: 2rem;
+    right: 2rem;
+
     height: 3.5rem;
     width: 6rem;
     background-color: var(--primary-color);

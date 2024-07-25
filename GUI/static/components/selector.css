@@ -4,7 +4,6 @@
 .inputContainer {
     display: flex;
     flex-wrap: wrap;
-    justify-content: space-between;
     flex-direction: row;
     width: 100%;
     height: 100%;
@@ -12,8 +11,8 @@
 
 .inputContainer .container {
     background: #fff;
-    padding: 20px;
-    margin: .5rem;
+    padding: 15px;
+    margin: .7rem;
     border-radius: 8px;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
     width: 15rem;
@@ -28,11 +27,20 @@
     font-size: 1rem;
 }
 
-.inputContainer input, select {
+.inputContainer input {
     font-size: 1rem;
     border-radius: 4px;
     background-color: white;
-    width: 5rem;
+    width: 4.9rem;
+    padding: .4rem;
+    transition: outline .1s;
+}
+
+.inputContainer select {
+    font-size: 1rem;
+    border-radius: 4px;
+    background-color: white;
+    width: 6rem;
     padding: .4rem;
     transition: outline .1s;
 }

@@ -4,62 +4,91 @@
 
 {% block extra_stylesheets %}
     <link rel="stylesheet" href="{{ url_for('static', filename='pages/training.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='components/selector.css') }}">
 {% endblock %}
 
 {% block content %}
-<div class="page-container">
-    <div class="menu">
-        <div class="menu-item" onclick="showContent('content1', this)">Guide</div>
-        <div class="menu-item" onclick="showContent('content2', this)">LSTM</div>
-        <div class="menu-item" onclick="showContent('content3', this)">Transfomer</div>
-    </div>
-    <div class="content">
-        <div id="content2">
-            {% include "components/model_guide.html" %}
-        </div>
-        <div id="content1">
-            <form  class="formContainer" action="{{ url_for('submit_lstm') }}" method="post">
-                {% include "components/lstm_selector.html" %}
-            </form>
-        </div>
-        <div id="content3">
-            {% include "components/transformer_selector.html" %}
-        </div>
-    </div>
+    <div class="trainingContainer">
+        <form  class="formContainer" action="{{ url_for('submit') }}" method="post">
+            <div class="accordianContainer">
+                <div class="accordion open">
+                    <span class="icon">+</span> Model
+                </div>
+                <div class="panel open">
+                    <div class="inputContainer">
+                        {% set items = ["lstm", "transformer"] %}
+                        {% set display_text="Model:" %}
+                        {% set select_name="model" %}
+                        {% set drop_down_id="model_selector" %}
+                        {% include "inputs/drop_down.html" %}
+                    </div>
 
+                    {% set selectorId="lstmSelector" %}
+                    {% include "components/lstm_selector.html" %}
+                </div>
+                
+                <div class="accordion">
+                    <span class="icon">+</span> Dataset
+                </div>
+                <div class="panel">
+                    {% include "components/dataset_selector.html" %}
+                </div>
+                
+                <div class="accordion">
+                    <span class="icon">+</span> Training
+                </div>
+                <div class="panel">
+                    {% include "components/training_selector.html" %}
+                </div>
+            </div>
+
+            {% include "inputs/submit_button.html" %}
+        </form>
+    </div>
     <script>
-        function showContent(contentId, clickedElement) {
-            // Hide all content
-            var contents = document.querySelectorAll('.content > div');
-            contents.forEach(function(content) {
-                content.classList.remove('active');
-            });
 
-            // Show the selected content
-            var selectedContent = document.getElementById(contentId);
-            if (selectedContent) {
-                selectedContent.classList.add('active');
+        // change element style based on input
+        document.getElementById('model_selector').addEventListener('input', function() {
+            const lstmContainer = document.getElementById('lstmSelector');
+            const value = this.value.toLowerCase();
+
+            if (value === 'lstm') {
+                lstmContainer.style.display = "flex";
             }
-
-            // Remove highlight from all menu items
-            var menuItems = document.querySelectorAll('.menu-item');
-            menuItems.forEach(function(item) {
-                item.classList.remove('active');
-            });
-
-            // Highlight the clicked menu item
-            if (clickedElement) {
-                clickedElement.classList.add('active');
-            }
-        }
-
-        // Show the first content by default and highlight the first menu item
-        document.addEventListener('DOMContentLoaded', function() {
-            var firstMenuItem = document.querySelector('.menu-item');
-            if (firstMenuItem) {
-                showContent('content1', firstMenuItem);
+            else if (value === 'transformer') {
+                lstmContainer.style.display = "none";
             }
         });
+
+
+        // controls the accordian menu
+        var acc = document.getElementsByClassName("accordion");
+    
+        for (var i = 0; i < acc.length; i++) {
+        acc[i].addEventListener("click", function() {
+            // Close all panels except the current one
+            for (var j = 0; j < acc.length; j++) {
+            if (acc[j] !== this) {
+                acc[j].classList.remove("open");
+                acc[j].nextElementSibling.classList.remove("open");
+                acc[j].nextElementSibling.style.maxHeight = null;
+                acc[j].nextElementSibling.style.padding = "0 18px";
+            }
+            }
+    
+            this.classList.toggle("open");
+            var panel = this.nextElementSibling;
+    
+            if (panel.classList.contains("open")) {
+            panel.classList.remove("open");
+            panel.style.maxHeight = null;
+            panel.style.padding = "0 18px";
+            } else {
+            panel.classList.add("open");
+            panel.style.maxHeight = panel.scrollHeight + "px";
+            panel.style.padding = "18px";
+            }
+        });
+        }
     </script>
-</div>
 {% endblock %}
