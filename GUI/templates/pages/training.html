@@ -12,36 +12,58 @@
         <form  class="formContainer" action="{{ url_for('submit') }}" method="post">
             <div class="accordianContainer">
                 <div class="accordion open">
-                    <span class="icon">+</span> Model
+                    <span class="icon">+</span> Backbone
                 </div>
                 <div class="panel open">
                     <div class="inputContainer">
+                        {% include "components/backbone_selector.html" %}
+
+                        <!-- model type -->
                         {% set items = ["lstm", "transformer"] %}
                         {% set display_text="Model:" %}
                         {% set select_name="model" %}
                         {% set drop_down_id="model_selector" %}
                         {% include "inputs/drop_down.html" %}
                     </div>
-
-                    {% set selectorId="lstmSelector" %}
-                    {% include "components/lstm_selector.html" %}
-
                     {% set selectorId="transformerSelector" %}
                     {% include "components/transformer_selector.html" %}
                 </div>
+
+                <div class="accordion">
+                    <span class="icon">+</span> Memory
+                </div>
+                <div class="panel">
+                    <div class="inputContainer">
+                        {% include "components/memory_selector.html" %}
+                    </div>
+                </div> 
                 
                 <div class="accordion">
                     <span class="icon">+</span> Dataset
                 </div>
                 <div class="panel">
-                    {% include "components/dataset_selector.html" %}
+                    <div class="inputContainer">
+                        {% include "components/dataset_selector.html" %}
+
+                        <!-- cirriculum selector -->
+                        {% set items = curriculums %}
+                        {% set display_text="Curriculum:" %}
+                        {% set select_name="curriculum" %}
+                        {% set drop_down_id="curriculum_selector" %}
+                        {% include "inputs/drop_down.html" %}
+                    </div>
+
+                    {% set selectorId="cirriculumSelector" %}
+                    {% include "components/cirriculum_selector.html" %}
                 </div>
                 
                 <div class="accordion">
                     <span class="icon">+</span> Training
                 </div>
                 <div class="panel">
-                    {% include "components/training_selector.html" %}
+                    <div class="inputContainer">
+                        {% include "components/training_selector.html" %}
+                    </div>
                 </div>
             </div>
 
@@ -49,27 +71,41 @@
         </form>
     </div>
     <script>
-        // remove models that aren't lstm
-        document.getElementById('transformerSelector').style.display = "none";
+        // remove undesired panels
+        if (document.getElementById('model_selector').value.toLowerCase() === "lstm") {
+            document.getElementById('transformerSelector').style.display = "none";
+        }
+        if (document.getElementById('curriculum_selector').value.toLowerCase() === "none") {
+            document.getElementById('cirriculumSelector').style.display = "none";
+        }
 
+        // remove cirriculum based on input
+        document.getElementById('curriculum_selector').addEventListener('input', function() {
+            const cirriculumContainer = document.getElementById('cirriculumSelector');
 
-        // change element style based on input
+            const value = this.value.toLowerCase();
+
+            if (value === 'none') {
+                cirriculumContainer.style.display = "none";
+            }
+            else {
+                cirriculumContainer.style.display = "flex";
+            }
+        });
+
+        // remove models based on input
         document.getElementById('model_selector').addEventListener('input', function() {
-            const lstmContainer = document.getElementById('lstmSelector');
             const transformerContainer = document.getElementById('transformerSelector');
 
             const value = this.value.toLowerCase();
 
             if (value === 'lstm') {
-                lstmContainer.style.display = "flex";
                 transformerContainer.style.display = "none";
             }
             else if (value === 'transformer') {
-                lstmContainer.style.display = "none";
                 transformerContainer.style.display = "flex";
             }
         });
-
 
         // controls the accordian menu
         var acc = document.getElementsByClassName("accordion");
@@ -96,7 +132,7 @@
             panel.style.padding = "0 18px";
             } else {
             panel.classList.add("open");
-            panel.style.maxHeight = panel.scrollHeight + "px";
+            panel.style.maxHeight = "fit-content";
             panel.style.padding = "18px";
             }
         });

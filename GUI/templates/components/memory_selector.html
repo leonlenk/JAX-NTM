@@ -1,0 +1,16 @@
+<!-- memory selector -->
+{% set items = memory_options %}
+{% set display_text="Memory:" %}
+{% set select_name="memory_model" %}
+{% include "inputs/drop_down.html" %}
+
+
+<!-- memory depth selector -->
+{% set display_text="Memory Depth:" %}
+{% set select_name="memory_m" %}
+{% include "inputs/integer_entry.html" %}
+
+<!-- memory width selector -->
+{% set display_text="Memory Width:" %}
+{% set select_name="memory_n" %}
+{% include "inputs/integer_entry.html" %}

@@ -1,0 +1,16 @@
+<head>
+    <link rel="stylesheet" href="{{ url_for('static', filename='components/selector.css') }}">
+</head>
+<body>
+    <div class="inputContainer" id="{{ selectorId }}">
+        {% set display_text="Min Sequence Length:" %}
+        {% set select_name="cirriculum_min_length" %}
+        {% set integer_entry_id="cirriculum_min" %}
+        {% include "inputs/integer_entry.html" %}
+
+        {% set display_text="Max Sequence Length:" %}
+        {% set select_name="cirriculum_max_length" %}
+        {% set integer_entry_id="cirriculum_max" %}
+        {% include "inputs/integer_entry.html" %}
+    </div>
+</body>

@@ -2,8 +2,7 @@
 
 from flask import Flask, render_template, request
 
-from GUI import config_options
-from Training.Backbones.NTM_graves2014 import LSTMConfig, LSTMModel
+from GUI import config_options, parse_requests
 
 app = Flask(__name__)
 
@@ -35,26 +34,11 @@ def configure_models():
 
 @app.route("/submit", methods=["POST"])
 def submit():
-    lstm_config = LSTMConfig(
-        learning_rate=float(request.form["learning_rate"]),
-        optimizer=config_options.OPTIMIZERS[request.form["optimizer"]],
-        memory_M=int(request.form["memory_m"]),
-        memory_N=int(request.form["memory_n"]),
-        memory_class=config_options.MEMORY_MODELS[request.form["memory_model"]],
-        backbone_class=LSTMModel,
-        read_head_class=config_options.READ_CONTROLLERS[
-            request.form["read_controller"]
-        ],
-        write_head_class=config_options.WRITE_CONTROLLERS[
-            request.form["write_controller"]
-        ],
-        num_layers=int(request.form["layers"]),
-        input_features=1,
-    )
-
     # curriculum_config = request.form["curriculum"]
 
-    return f"Result: {lstm_config}"
+    parse_requests.process_training_request(request.form)
+
+    return "hi"
 
 
 if __name__ == "__main__":

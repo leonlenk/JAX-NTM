@@ -1,18 +1,5 @@
-<head>
-    <link rel="stylesheet" href="{{ url_for('static', filename='components/selector.css') }}">
-</head>
-<body>
-    <div class="inputContainer" id="{{ selectorId }}">
-        <!-- dataset -->
-        {% set items = datasets %}
-        {% set display_text="Dataset:" %}
-        {% set select_name="dataset" %}
-        {% include "inputs/drop_down.html" %}
-
-        <!-- cirrculum -->
-        {% set items = curriculums %}
-        {% set display_text="Curriculum:" %}
-        {% set select_name="curriculum" %}
-        {% include "inputs/drop_down.html" %}
-    </div>
-</body>
+<!-- dataset -->
+{% set items = datasets %}
+{% set display_text="Dataset:" %}
+{% set select_name="dataset" %}
+{% include "inputs/drop_down.html" %}

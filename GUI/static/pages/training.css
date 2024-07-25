@@ -33,7 +33,7 @@
   display: none;
   background-color: white;
   overflow: hidden;
-  transition: max-height 0.4s ease-out, padding 0.4s ease-out;
+  transition: max-height 2s ease-out, padding .4s ease-out;
   max-height: 0;
 }
 

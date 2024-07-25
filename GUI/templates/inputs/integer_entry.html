@@ -4,7 +4,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='inputs/integer_entry.css') }}">
 </head>
 <body>
-    <div class="container">
+    <div class="container" id="{{ integer_entry_id }}">
         <label for="quantity">{{ display_text }}</label>
         <input  type="number" id="quantity" name="{{ select_name }}"" min="1" max="100000" step="1" value="1">
     </div>

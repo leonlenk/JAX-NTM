@@ -25,5 +25,6 @@ DATA_SET = {
 }
 
 CURRICULUM = {
-    "zaremba": Training.Curriculum_zaremba2014,
+    "none": None,
+    "zaremba": Training.Curriculum_zaremba2014.CurriculumSchedulerZaremba2014,
 }

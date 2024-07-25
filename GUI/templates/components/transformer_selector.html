@@ -3,37 +3,24 @@
 </head>
 <body>
     <div class="inputContainer" id="{{ selectorId }}">
-        <!-- memory selector -->
-        {% set items = memory_options %}
-        {% set display_text="Memory:" %}
-        {% set select_name="memory_model" %}
-        {% include "inputs/drop_down.html" %}
-
-        <!-- read controller selector -->
-        {% set items = read_controller_options %}
-        {% set display_text="Read Controller:" %}
-        {% set select_name="read_controller" %}
-        {% include "inputs/drop_down.html" %}
-
-        <!-- write controller selector -->
-        {% set items = write_controller_options %}
-        {% set display_text="Write Controller:" %}
-        {% set select_name="write_controller" %}
-        {% include "inputs/drop_down.html" %}
-
-        <!-- memory depth selector -->
-        {% set display_text="Memory Depth:" %}
-        {% set select_name="memory_m" %}
+        <!-- model dim selector -->
+        {% set display_text="Model Dim:" %}
+        {% set select_name="transfomer_dim_model" %}
         {% include "inputs/integer_entry.html" %}
 
-        <!-- memory width selector -->
-        {% set display_text="Memory Width:" %}
-        {% set select_name="memory_n" %}
+        <!-- num heads selector -->
+        {% set display_text="Number of Heads:" %}
+        {% set select_name="transfomer_num_heads" %}
         {% include "inputs/integer_entry.html" %}
 
-        <!-- numbrt of layers selector-->
-        {% set display_text="Number of Layers:" %}
-        {% set select_name="layers" %}
+        <!-- dim ff selector -->
+        {% set display_text="Fully Connected Dim:" %}
+        {% set select_name="transfomer_dim_ff" %}
+        {% include "inputs/integer_entry.html" %}
+
+        <!-- max seq length selector -->
+        {% set display_text="Max Sequence Length:" %}
+        {% set select_name="transfomer_max_sequence_length" %}
         {% include "inputs/integer_entry.html" %}
     </div>
 </body>
