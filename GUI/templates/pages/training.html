@@ -25,6 +25,9 @@
 
                     {% set selectorId="lstmSelector" %}
                     {% include "components/lstm_selector.html" %}
+
+                    {% set selectorId="transformerSelector" %}
+                    {% include "components/transformer_selector.html" %}
                 </div>
                 
                 <div class="accordion">
@@ -46,17 +49,24 @@
         </form>
     </div>
     <script>
+        // remove models that aren't lstm
+        document.getElementById('transformerSelector').style.display = "none";
+
 
         // change element style based on input
         document.getElementById('model_selector').addEventListener('input', function() {
             const lstmContainer = document.getElementById('lstmSelector');
+            const transformerContainer = document.getElementById('transformerSelector');
+
             const value = this.value.toLowerCase();
 
             if (value === 'lstm') {
                 lstmContainer.style.display = "flex";
+                transformerContainer.style.display = "none";
             }
             else if (value === 'transformer') {
                 lstmContainer.style.display = "none";
+                transformerContainer.style.display = "flex";
             }
         });
 
@@ -66,6 +76,7 @@
     
         for (var i = 0; i < acc.length; i++) {
         acc[i].addEventListener("click", function() {
+
             // Close all panels except the current one
             for (var j = 0; j < acc.length; j++) {
             if (acc[j] !== this) {
