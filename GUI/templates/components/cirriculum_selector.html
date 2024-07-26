@@ -15,19 +15,23 @@
         <!-- Accuracy Threshold -->
         {% set display_text="Accuracy Threshold:" %}
         {% set select_name="cirriculum_accuracy_threshold" %}
+        {% set default_value="0.9" %}
         {% include "inputs/probability_entry.html" %}
 
         <!-- ZAREMBA2014 probabilities -->
         {% set display_text="Zaremba p1:" %}
         {% set select_name="zaremba_p1" %}
+        {% set default_value="0.1" %}
         {% include "inputs/probability_entry.html" %}
 
         {% set display_text="Zaremba p2:" %}
         {% set select_name="zaremba_p2" %}
+        {% set default_value="0.25" %}
         {% include "inputs/probability_entry.html" %}
 
         {% set display_text="Zaremba p3:" %}
         {% set select_name="zaremba_p3" %}
+        {% set default_value="0.65" %}
         {% include "inputs/probability_entry.html" %}
 
     </div>
