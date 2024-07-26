@@ -105,6 +105,9 @@ if __name__ == "__main__":
         jnp.ones((memory_n,)),
         memory_model,
     )
+
+    print(f"{model.parameter_count(params)=}")
+
     model_state = train_state.TrainState.create(
         apply_fn=model.apply,
         tx=optax.adam(lr),
