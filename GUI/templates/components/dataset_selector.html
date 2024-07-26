@@ -4,6 +4,12 @@
 {% set select_name="dataset" %}
 {% include "inputs/drop_down.html" %}
 
+<!-- Input size -->
+{% set display_text="Input Size:" %}
+{% set select_name="data_input_size" %}
+{% set default_value="32" %}
+{% include "inputs/integer_entry.html" %}
+
 <!-- accuracy tolerance -->
 {% set display_text="Accuracy Tolerance:" %}
 {% set select_name="accuracy_tolerance" %}

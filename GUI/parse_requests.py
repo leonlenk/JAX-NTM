@@ -28,7 +28,7 @@ def process_training_request(request: dict):
                     request["write_controller"]
                 ],
                 num_layers=int(request["layers"]),
-                input_features=1,
+                input_features=int(request["data_input_size"]),
             )
             training_config = LSTMTrainingConfig(model_config)
 
@@ -57,7 +57,7 @@ def process_training_request(request: dict):
 
     curriculum = None
     curriculumMetaData = None
-    if config_options.CURRICULUM[request["curriculum"]] != "none":
+    if config_options.CURRICULUM[request["curriculum"]] is not None:
         curriculum_config = {
             globals.CURRICULUM.CONFIGS.ACCURACY_THRESHOLD: float(
                 request["cirriculum_accuracy_threshold"]
@@ -79,14 +79,14 @@ def process_training_request(request: dict):
     train_dataset = config_options.DATA_SET[request["dataset"]](
         batch_size=int(request["train_batch_size"]),
         num_batches=int(request["train_num_batches"]),
-        memory_depth=int(request["memory_m"]),
+        memory_depth=int(request["data_input_size"]),
         config=dataset_config,
     )
 
     val_dataset = config_options.DATA_SET[request["dataset"]](
         batch_size=int(request["val_batch_size"]),
         num_batches=int(request["val_num_batches"]),
-        memory_depth=int(request["memory_m"]),
+        memory_depth=int(request["data_input_size"]),
         config=dataset_config,
     )
 

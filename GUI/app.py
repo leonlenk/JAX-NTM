@@ -1,5 +1,7 @@
 # run with: flask --app GUI.app run --debug
 
+from multiprocessing import Process
+
 from flask import Flask, render_template, request
 
 from GUI import config_options, parse_requests
@@ -34,11 +36,10 @@ def configure_models():
 
 @app.route("/submit", methods=["POST"])
 def submit():
-    # curriculum_config = request.form["curriculum"]
+    p = Process(target=parse_requests.process_training_request, args=(request.form,))
+    p.start()
 
-    parse_requests.process_training_request(request.form)
-
-    return "hi"
+    return "started a new process"
 
 
 if __name__ == "__main__":
