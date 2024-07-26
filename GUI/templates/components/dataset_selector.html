@@ -3,3 +3,9 @@
 {% set display_text="Dataset:" %}
 {% set select_name="dataset" %}
 {% include "inputs/drop_down.html" %}
+
+<!-- accuracy tolerance -->
+{% set display_text="Accuracy Tolerance:" %}
+{% set select_name="accuracy_tolerance" %}
+{% set default_value="0.0001" %}
+{% include "inputs/float_entry.html" %}

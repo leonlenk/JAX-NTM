@@ -4,5 +4,35 @@
 {% set select_name="optimizer" %}
 {% include "inputs/drop_down.html" %}
 
+<!-- train batch size -->
+{% set display_text="Train Batch Size:" %}
+{% set select_name="train_batch_size" %}
+{% set default_value="512" %}
+{% include "inputs/integer_entry.html" %}
+
+<!-- train num batches-->
+{% set display_text="Train Num Batchs:" %}
+{% set select_name="train_num_batches" %}
+{% set default_value="50" %}
+{% include "inputs/integer_entry.html" %}
+
+<!-- val batch size -->
+{% set display_text="Val Batch Size:" %}
+{% set select_name="val_batch_size" %}
+{% set default_value="512" %}
+{% include "inputs/integer_entry.html" %}
+
+<!-- val num batches-->
+{% set display_text="Val Num Batchs:" %}
+{% set select_name="val_num_batches" %}
+{% set default_value="5" %}
+{% include "inputs/integer_entry.html" %}
+
+<!-- num epochs -->
+{% set display_text="Num Epochs:" %}
+{% set select_name="num_epochs" %}
+{% set default_value="10" %}
+{% include "inputs/integer_entry.html" %}
+
 <!-- learning rate slide bar -->
 {% include "inputs/learning_rate.html" %}

@@ -65,6 +65,18 @@
                         {% include "components/training_selector.html" %}
                     </div>
                 </div>
+
+                <div class="accordion">
+                    <span class="icon">+</span> WandB
+                </div>
+                <div class="panel">
+                    <div class="inputContainer">
+                        {% set items = ["no", "yes"] %}
+                        {% set display_text="Use WandB:" %}
+                        {% set select_name="use_wandb" %}
+                        {% include "inputs/drop_down.html" %}
+                    </div>
+                </div>
             </div>
 
             {% include "inputs/submit_button.html" %}

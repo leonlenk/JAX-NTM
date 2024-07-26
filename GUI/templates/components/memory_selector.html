@@ -4,13 +4,14 @@
 {% set select_name="memory_model" %}
 {% include "inputs/drop_down.html" %}
 
-
 <!-- memory depth selector -->
 {% set display_text="Memory Depth:" %}
 {% set select_name="memory_m" %}
+{% set default_value="32" %}
 {% include "inputs/integer_entry.html" %}
 
 <!-- memory width selector -->
 {% set display_text="Memory Width:" %}
 {% set select_name="memory_n" %}
+{% set default_value="64" %}
 {% include "inputs/integer_entry.html" %}

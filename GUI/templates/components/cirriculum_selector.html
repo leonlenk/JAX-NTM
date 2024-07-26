@@ -3,14 +3,32 @@
 </head>
 <body>
     <div class="inputContainer" id="{{ selectorId }}">
+        <!-- Sequence length range -->
         {% set display_text="Min Sequence Length:" %}
         {% set select_name="cirriculum_min_length" %}
-        {% set integer_entry_id="cirriculum_min" %}
         {% include "inputs/integer_entry.html" %}
 
         {% set display_text="Max Sequence Length:" %}
         {% set select_name="cirriculum_max_length" %}
-        {% set integer_entry_id="cirriculum_max" %}
         {% include "inputs/integer_entry.html" %}
+
+        <!-- Accuracy Threshold -->
+        {% set display_text="Accuracy Threshold:" %}
+        {% set select_name="cirriculum_accuracy_threshold" %}
+        {% include "inputs/probability_entry.html" %}
+
+        <!-- ZAREMBA2014 probabilities -->
+        {% set display_text="Zaremba p1:" %}
+        {% set select_name="zaremba_p1" %}
+        {% include "inputs/probability_entry.html" %}
+
+        {% set display_text="Zaremba p2:" %}
+        {% set select_name="zaremba_p2" %}
+        {% include "inputs/probability_entry.html" %}
+
+        {% set display_text="Zaremba p3:" %}
+        {% set select_name="zaremba_p3" %}
+        {% include "inputs/probability_entry.html" %}
+
     </div>
 </body>

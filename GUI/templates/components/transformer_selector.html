@@ -6,21 +6,25 @@
         <!-- model dim selector -->
         {% set display_text="Model Dim:" %}
         {% set select_name="transfomer_dim_model" %}
+        {% set default_value="128" %}
         {% include "inputs/integer_entry.html" %}
 
         <!-- num heads selector -->
         {% set display_text="Number of Heads:" %}
         {% set select_name="transfomer_num_heads" %}
+        {% set default_value="4" %}
         {% include "inputs/integer_entry.html" %}
 
         <!-- dim ff selector -->
         {% set display_text="Fully Connected Dim:" %}
         {% set select_name="transfomer_dim_ff" %}
+        {% set default_value="512" %}
         {% include "inputs/integer_entry.html" %}
 
         <!-- max seq length selector -->
         {% set display_text="Max Sequence Length:" %}
         {% set select_name="transfomer_max_sequence_length" %}
+        {% set default_value="20" %}
         {% include "inputs/integer_entry.html" %}
     </div>
 </body>
