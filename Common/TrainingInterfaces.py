@@ -322,10 +322,10 @@ class DataEncoderStub(DataEncoderInterface):
 
 
 class CurriculumSchedulerStub(CurriculumSchedulerInterface):
-    """Stub CurriculumScheduler which always returns difficulties of 1"""
+    """Stub CurriculumScheduler which always returns a preset difficulty"""
 
-    def __init__(self, config: dict = {}):
-        self.config = config
+    def __init__(self, curriculum_level: int = 0, config: dict = {}):
+        self.curriculum_level: int = curriculum_level
 
     def update_curriculum_level(self, curriculum_params: dict):
         pass
@@ -334,4 +334,4 @@ class CurriculumSchedulerStub(CurriculumSchedulerInterface):
         return super().get_curriculum_level()
 
     def get_curriculum(self, batch_size: int) -> Array:
-        return jnp.ones((batch_size,))
+        return jnp.repeat(self.curriculum_level, batch_size)

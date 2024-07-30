@@ -78,7 +78,7 @@ class CopyLoader(DataloaderInterface):
         if self.config.single_level:
             curriculum = jnp.repeat(
                 self.config.curriculum_scheduler.get_curriculum(1), self.batch_size
-            )
+            ).astype(int)
         else:
             curriculum = self.config.curriculum_scheduler.get_curriculum(
                 self.batch_size

@@ -13,7 +13,9 @@ from Common.TrainingInterfaces import DataloaderInterface
 
 
 class BinaryAdditionLoader(DataloaderInterface):
-    """Returns an input and a target, both of size (batch_size, memory_depth, 2 * (curriculum_level + 1)).
+    """Returns an input and a target
+        The input is of size (batch_size, memory_depth, 2 * (curriculum_level + 1)).
+        The output is of size (batch_size, memory_depth, curriculum_level + 1).
     The addition problem will be composed of two numbers (the augend and the addend)
         These are randomly selected from [0,2^curriculum_level)
     The first element of each memory location will be 1s and 0s representing the number in binary.
@@ -53,19 +55,19 @@ class BinaryAdditionLoader(DataloaderInterface):
 
         target =    Array([
                 [                           # first batch
-                [1., 0., 0., 0., 0., 0.],    # 1s place
+                [1., 0., 0., 0., 0., 0.],   # 1s place
                 [1., 0., 0., 0., 0., 0.],   # 2s place
                 [0., 0., 0., 0., 0., 0.],
                 [0., 0., 0., 0., 0., 0.],
                 [0., 0., 0., 0., 0., 0.]
                 ],                          # sum = 3
-                [
-                [1., 0., 0., 0., 0., 0.],
+                [                           # second batch
+                [1., 0., 0., 0., 0., 0.],   # 1s place
                 [0., 0., 0., 0., 0., 0.],
                 [0., 0., 0., 0., 0., 0.],
                 [0., 0., 0., 0., 0., 0.],
                 [0., 0., 0., 0., 0., 0.]
-                ]], dtype=float32)
+                ]], dtype=float32)          # sum = 1
     """
 
     def update_curriculum_level(self, curriculum_params: dict):
@@ -115,7 +117,7 @@ class BinaryAdditionLoader(DataloaderInterface):
                 (self.batch_size, 2 * (max_curriculum_level + 1), self.memory_depth)
             )
         target = jnp.zeros(
-            (self.batch_size, 2 * max_curriculum_level + 1, self.memory_depth)
+            (self.batch_size, max_curriculum_level + 1, self.memory_depth)
         )
 
         # get the augends, addends, and sums

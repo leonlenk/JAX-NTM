@@ -47,18 +47,23 @@ class LSTMModel(BackboneInterface):
         for i in range(self.layers):
             carry[i], input = lstm_layers[i](carry[i], input)
 
-        read_data, read_locations = self.read_heads[0](
-            input,
-            read_previous,
-            memory_weights,
-            memory_model,
-        )
-        memory_weights, write_locations = self.write_heads[0](
-            input,
-            write_previous,
-            memory_weights,
-            memory_model,
-        )
+        read_data = jnp.array([])
+        for read_head in self.read_heads:
+            cur_read_data, read_locations = read_head(
+                input,
+                read_previous,
+                memory_weights,
+                memory_model,
+            )
+            read_data = jnp.concatenate([read_data, cur_read_data])
+
+        for write_head in self.write_heads:
+            memory_weights, write_locations = write_head(
+                input,
+                write_previous,
+                memory_weights,
+                memory_model,
+            )
 
         dense_input = jnp.concatenate([input, read_data], axis=-1)
         output = nn.sigmoid(

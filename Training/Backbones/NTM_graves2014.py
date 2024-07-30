@@ -161,6 +161,8 @@ if __name__ == "__main__":
     from Training.Curriculum_zaremba2014 import CurriculumSchedulerZaremba2014
     from Training.training_loop import train
 
+    training_name = "NTM_graves2014_copy"
+
     MEMORY_DEPTH = 12
     MEMORY_WIDTH = 8
     INPUT_SIZE = 8
@@ -226,66 +228,73 @@ if __name__ == "__main__":
         TrainingConfig={str(0): training_config},
     )
 
-    checkpoint_wrapper = CheckpointWrapper("NTM_graves2014_copy", delete_existing=True)
-
-    train(
-        project_name=globals.WANDB.PROJECTS.CODE_TESTING,
-        training_config=training_config,
-        training_metadata=training_metadata,
-        num_epochs=10,
-        train_dataset=train_dataset,
-        val_dataset=val_dataset,
-        wandb_tags=[globals.WANDB.TAGS.CODE_TESTING],
-        checkpoint_wrapper=checkpoint_wrapper,
-        # use_wandb=True,
+    use_existing_checkpoint = False
+    checkpoint_wrapper = CheckpointWrapper(
+        training_name, delete_existing=not use_existing_checkpoint
     )
+
+    if use_existing_checkpoint:
+        training_config.model_state = checkpoint_wrapper.load_checkpoint(
+            abstract_pytree=training_config.model_state
+        ).state
+
+    else:
+        train(
+            project_name=globals.WANDB.PROJECTS.CODE_TESTING,
+            training_config=training_config,
+            training_metadata=training_metadata,
+            num_epochs=10,
+            train_dataset=train_dataset,
+            val_dataset=val_dataset,
+            wandb_tags=[globals.WANDB.TAGS.CODE_TESTING],
+            checkpoint_wrapper=checkpoint_wrapper,
+            # use_wandb=True,
+        )
 
     from tqdm import tqdm
 
+    from Common.TrainingInterfaces import CurriculumSchedulerStub
     from Visualization.MemoryWrappers import SequentialInferenceMemoryVisualizer
 
     training_config.memory_model = SequentialInferenceMemoryVisualizer(
         training_config.memory_model,
-        save_dir="NTM_graves2014_copy",
+        save_dir=training_name,
         delete_existing=True,
         pixel_scale=64,
     )
 
-    curriculum_config = {
-        CURRICULUM.CONFIGS.ACCURACY_THRESHOLD: 0.9,
-        CURRICULUM.CONFIGS.MIN: 2,
-        CURRICULUM.CONFIGS.MAX: 20,
-        CURRICULUM.CONFIGS.ZAREMBA2014.P1: 1,
-        CURRICULUM.CONFIGS.ZAREMBA2014.P2: 0,
-        CURRICULUM.CONFIGS.ZAREMBA2014.P3: 0,
-    }
-    curric = CurriculumSchedulerZaremba2014(curriculum_config)
-    dataset_config = DataloaderConfig(curriculum_scheduler=curric)
-    test_dataset = CopyLoader(
-        batch_size=1,
-        num_batches=10,
-        memory_depth=INPUT_SIZE,
-        config=dataset_config,
-    )
+    num_batches_per_level = 1
+    curriculum_levels = [x for x in range(2, 20)]
 
-    with tqdm(test_dataset) as pbar:
+    with tqdm(curriculum_levels) as pbar:
         pbar.set_description("Visualization")
-        for data_batch, target_batch in pbar:
-            # get a single item from the batch
-            data = data_batch.at[0].get()
-            target = target_batch.at[0].get()
 
-            TEST_MEMORY_WIDTH = data.shape[0] + 1
-
-            training_config.memory_model.set_up_inference(
-                data, target, TEST_MEMORY_WIDTH, MEMORY_DEPTH
+        for curriculum_level in pbar:
+            curric = CurriculumSchedulerStub(curriculum_level=curriculum_level)
+            dataset_config = DataloaderConfig(curriculum_scheduler=curric)
+            test_dataset = CopyLoader(
+                batch_size=1,
+                num_batches=num_batches_per_level,
+                memory_depth=INPUT_SIZE,
+                config=dataset_config,
             )
 
-            training_config.run_model(
-                training_config.model_state.params,
-                data,
-                target.shape,
-                TEST_MEMORY_WIDTH,
-            )
+            for data_batch, target_batch in test_dataset:
+                # get a single item from the batch
+                data = data_batch.at[0].get()
+                target = target_batch.at[0].get()
 
-            training_config.memory_model.create_gif(loop=0, frame_duration=500)
+                TEST_MEMORY_WIDTH = data.shape[0] + 1
+
+                training_config.memory_model.set_up_inference(
+                    data, target, TEST_MEMORY_WIDTH, MEMORY_DEPTH
+                )
+
+                training_config.run_model(
+                    training_config.model_state.params,
+                    data,
+                    target.shape,
+                    TEST_MEMORY_WIDTH,
+                )
+
+                training_config.memory_model.create_gif(loop=0, frame_duration=500)
