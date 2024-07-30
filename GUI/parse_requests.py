@@ -1,5 +1,3 @@
-import jax
-
 from Backbones.NTM_graves2014 import LSTMModel
 from Backbones.Transformer import TransformerModel
 from Common import globals
@@ -29,6 +27,7 @@ def process_training_request(request: dict):
                 ],
                 num_layers=int(request["layers"]),
                 input_features=int(request["data_input_size"]),
+                random_seed=int(request["random_seed"]),
             )
             training_config = LSTMTrainingConfig(model_config)
 
@@ -38,7 +37,6 @@ def process_training_request(request: dict):
                 optimizer=config_options.OPTIMIZERS[request["optimizer"]],
                 memory_M=int(request["memory_m"]),
                 memory_N=int(request["memory_n"]),
-                prng_key=jax.random.key(request["random_seed"]),
                 memory_class=config_options.MEMORY_MODELS[request["memory_model"]],
                 backbone_class=TransformerModel,
                 read_head_class=config_options.READ_CONTROLLERS[
@@ -52,6 +50,7 @@ def process_training_request(request: dict):
                 num_heads=int(request["transfomer_num_heads"]),
                 dim_ff=int(request["transfomer_dim_ff"]),
                 max_sequence_len=int(request["transfomer_max_sequence_length"]),
+                random_seed=int(request["random_seed"]),
             )
             training_config = TransformerTrainingConfig(model_config)
 

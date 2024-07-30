@@ -1,9 +1,8 @@
-from typing import Sequence
+from typing import List, Sequence, Tuple
 
 import jax
 import jax.numpy as jnp
 from flax import linen as nn
-from jax import Array
 
 from Common import globals
 from Common.BackboneInterface import BackboneInterface
@@ -14,7 +13,6 @@ from Common.globals import METADATA, MODELS
 class LSTMModel(BackboneInterface):
     """Basic stacked LSTM for controlling an NTM"""
 
-    prng_key: Array
     layers: int
     num_outputs: int
     read_heads: Sequence[ControllerInterface]
@@ -29,13 +27,25 @@ class LSTMModel(BackboneInterface):
 
     @nn.compact
     def __call__(
-        self, input, memory_weights, read_previous, write_previous, memory_model
+        self,
+        input,
+        memory_weights,
+        read_previous,
+        write_previous,
+        memory_model,
+        prng_key: jax.Array,
+        carry: List[Tuple[jax.Array, jax.Array]] | None,
     ):
         lstm_layers = [nn.OptimizedLSTMCell(self.features) for _ in range(self.layers)]
-        hidden = lstm_layers[0].initialize_carry(self.prng_key, input.shape)
+        # init lstm carry
+        if carry is None:
+            carry = []
+            for layer in lstm_layers:
+                prng_key, split_key = jax.random.split(prng_key)
+                carry.append(layer.initialize_carry(split_key, input.shape))
 
         for i in range(self.layers):
-            hidden, input = lstm_layers[i](hidden, input)
+            carry[i], input = lstm_layers[i](carry[i], input)
 
         read_data, read_locations = self.read_heads[0](
             input,
@@ -57,7 +67,14 @@ class LSTMModel(BackboneInterface):
             )(dense_input)
         )
 
-        return (output, memory_weights, read_locations, write_locations)
+        return (
+            output,
+            memory_weights,
+            read_locations,
+            write_locations,
+            prng_key,
+            carry,
+        )
 
     def get_metadata(self) -> dict:
         return {
@@ -94,7 +111,7 @@ if __name__ == "__main__":
     read_head = [NTMReadController(memory_n, memory_m)]
     write_head = [NTMWriteController(memory_n, memory_m)]
 
-    model = LSTMModel(key3, layers, num_outputs, read_head, write_head, memory_m)
+    model = LSTMModel(layers, num_outputs, read_head, write_head, memory_m)
     init_input = jnp.ones((input_features,))
     memory_weights = jnp.zeros((memory_n, memory_m))
     params = model.init(

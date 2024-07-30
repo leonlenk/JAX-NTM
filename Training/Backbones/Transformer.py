@@ -15,7 +15,6 @@ from Common.TrainingInterfaces import ModelConfigInterface, TrainingConfigInterf
 
 @dataclass
 class TransformerConfig(ModelConfigInterface):
-    prng_key: jax.Array
     learning_rate: float
     optimizer: Callable
     memory_class: Type[MemoryInterface]
@@ -29,6 +28,10 @@ class TransformerConfig(ModelConfigInterface):
     num_heads: int
     dim_ff: int
     max_sequence_len: int
+    random_seed: int
+
+    def __post_init__(self):
+        self.prng_key = jax.random.key(self.random_seed)
 
 
 class TransformerTrainingConfig(TrainingConfigInterface):
@@ -111,8 +114,8 @@ class TransformerTrainingConfig(TrainingConfigInterface):
             model_config.memory_M,
         )
 
-        key1, key2, self.model_config.prng_key = jax.random.split(
-            self.model_config.prng_key, num=3
+        key1, self.model_config.prng_key = jax.random.split(
+            self.model_config.prng_key, num=2
         )
 
         # init memory
@@ -130,7 +133,6 @@ class TransformerTrainingConfig(TrainingConfigInterface):
 
         # init backbone
         model = self.model_config.backbone_class(
-            prng_key=key1,
             layers=self.model_config.num_layers,
             num_outputs=self.model_config.dim_model,
             read_heads=read_heads,
@@ -146,7 +148,7 @@ class TransformerTrainingConfig(TrainingConfigInterface):
         init_input = jnp.ones((2, self.model_config.dim_model))
 
         params = model.init(
-            key2,
+            key1,
             init_input,
             memory_weights,
             read_previous,
@@ -177,7 +179,6 @@ if __name__ == "__main__":
     INPUT_SIZE = 8
 
     model_config = TransformerConfig(
-        prng_key=jax.random.key(globals.JAX.RANDOM_SEED),
         learning_rate=1e-3,
         optimizer=optax.adamw,
         memory_class=NTMMemory,
@@ -191,6 +192,7 @@ if __name__ == "__main__":
         num_heads=1,
         dim_ff=250,
         max_sequence_len=20,
+        random_seed=globals.JAX.RANDOM_SEED,
     )
     training_config = TransformerTrainingConfig(model_config)
 

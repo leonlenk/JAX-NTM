@@ -11,7 +11,6 @@ from Common.MemoryInterface import MemoryInterface
 
 
 class BackboneInterface(nn.Module, ABC):
-    prng_key: Array
     # TODO make more general for e.g. transformers (and override get_metadata with custom info)
     layers: int
     num_outputs: int

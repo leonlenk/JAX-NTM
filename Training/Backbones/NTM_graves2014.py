@@ -25,6 +25,10 @@ class LSTMConfig(ModelConfigInterface):
     memory_N: int
     num_layers: int
     input_features: int
+    random_seed: int
+
+    def __post_init__(self):
+        self.prng_key = jax.random.key(self.random_seed)
 
 
 # TODO make memory width variable (set per batch based on batch's width (curriculum level))
@@ -45,11 +49,15 @@ class LSTMTrainingConfig(TrainingConfigInterface):
         read_previous = jnp.zeros((memory_width,)).at[0].set(1)
         write_previous = jnp.zeros((memory_width,)).at[0].set(1)
         memory_weights = jnp.zeros((memory_width, self.model_config.memory_M))
+        carry = None
+        prng_key, self.model_config.prng_key = jax.random.split(
+            self.model_config.prng_key, num=2
+        )
 
         # processing loop
         for sequence in range(data.shape[0]):
             self.memory_model.update_step(input_index=sequence, output_index=None)
-            (output, memory_weights, read_previous, write_previous) = (
+            (output, memory_weights, read_previous, write_previous, prng_key, carry) = (
                 self.model_state.apply_fn(
                     {globals.JAX.PARAMS: model_params},
                     data[sequence],
@@ -57,21 +65,30 @@ class LSTMTrainingConfig(TrainingConfigInterface):
                     read_previous,
                     write_previous,
                     self.memory_model,
+                    prng_key,
+                    carry,
                 )
             )
 
         output = jnp.empty(output_shape)
         for sequence in range(output_shape[0]):
             self.memory_model.update_step(input_index=None, output_index=sequence)
-            (sequence_output, memory_weights, read_previous, write_previous) = (
-                self.model_state.apply_fn(
-                    {globals.JAX.PARAMS: model_params},
-                    jnp.zeros_like(data[0]),
-                    memory_weights,
-                    read_previous,
-                    write_previous,
-                    self.memory_model,
-                )
+            (
+                sequence_output,
+                memory_weights,
+                read_previous,
+                write_previous,
+                prng_key,
+                carry,
+            ) = self.model_state.apply_fn(
+                {globals.JAX.PARAMS: model_params},
+                jnp.zeros_like(data[0]),
+                memory_weights,
+                read_previous,
+                write_previous,
+                self.memory_model,
+                prng_key,
+                carry,
             )
             output = output.at[sequence].set(sequence_output)
 
@@ -87,8 +104,6 @@ class LSTMTrainingConfig(TrainingConfigInterface):
         self,
     ) -> tuple[LSTMModel, train_state.TrainState, MemoryInterface]:
         temp_n = 2
-        rng_key = jax.random.key(globals.JAX.RANDOM_SEED)
-        key1, key2 = jax.random.split(rng_key, num=2)
 
         # init memory
         memory_model = self.model_config.memory_class()
@@ -103,22 +118,28 @@ class LSTMTrainingConfig(TrainingConfigInterface):
 
         # init backbone
         model = self.model_config.backbone_class(
-            key1,
             self.model_config.num_layers,
             self.model_config.input_features,
             read_head,
             write_head,
             self.model_config.memory_M,
         )
+
+        carry = None
+        prng_key, key2, self.model_config.prng_key = jax.random.split(
+            self.model_config.prng_key, num=3
+        )
         init_input = jnp.ones((self.model_config.input_features,))
         memory_weights = jnp.ones((temp_n, self.model_config.memory_M))
         params = model.init(
-            key1,
+            key2,
             init_input,
             memory_weights,
             jnp.ones(temp_n),
             jnp.ones(temp_n),
             memory_model,
+            prng_key,
+            carry,
         )
         model_state = train_state.TrainState.create(
             apply_fn=model.apply,
@@ -154,6 +175,7 @@ if __name__ == "__main__":
         memory_N=MEMORY_WIDTH,
         num_layers=1,
         input_features=INPUT_SIZE,
+        random_seed=globals.JAX.RANDOM_SEED,
     )
     training_config = LSTMTrainingConfig(model_config)
 

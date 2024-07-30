@@ -85,7 +85,6 @@ class PositionalEncoding(nn.Module):
 
 
 class TransformerModel(BackboneInterface):
-    prng_key: jax.Array
     layers: int
     num_outputs: int
     read_heads: Sequence[ControllerInterface]
@@ -159,7 +158,6 @@ if __name__ == "__main__":
     write_heads = [NTMWriteController(memory_n, memory_m) for _ in range(num_layers)]
     memory_model = NTMMemory()
     model = TransformerModel(
-        prng_key=key1,
         layers=num_layers,
         num_outputs=dim_model,
         read_heads=read_heads,
