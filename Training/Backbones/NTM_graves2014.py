@@ -70,6 +70,7 @@ class LSTMTrainingConfig(TrainingConfigInterface):
                 )
             )
 
+        carry = None
         output = jnp.empty(output_shape)
         for sequence in range(output_shape[0]):
             self.memory_model.update_step(input_index=None, output_index=sequence)
@@ -182,7 +183,7 @@ if __name__ == "__main__":
     curriculum_config = {
         CURRICULUM.CONFIGS.ACCURACY_THRESHOLD: 0.9,
         CURRICULUM.CONFIGS.MIN: 2,
-        CURRICULUM.CONFIGS.MAX: 10,
+        CURRICULUM.CONFIGS.MAX: 7,
         CURRICULUM.CONFIGS.ZAREMBA2014.P1: 0.10,
         CURRICULUM.CONFIGS.ZAREMBA2014.P2: 0.25,
         CURRICULUM.CONFIGS.ZAREMBA2014.P3: 0.65,
@@ -193,7 +194,7 @@ if __name__ == "__main__":
     )
     train_dataset = CopyLoader(
         batch_size=256,
-        num_batches=5,
+        num_batches=50,
         memory_depth=INPUT_SIZE,
         config=dataset_config,
     )
@@ -231,7 +232,7 @@ if __name__ == "__main__":
         project_name=globals.WANDB.PROJECTS.CODE_TESTING,
         training_config=training_config,
         training_metadata=training_metadata,
-        num_epochs=15,
+        num_epochs=10,
         train_dataset=train_dataset,
         val_dataset=val_dataset,
         wandb_tags=[globals.WANDB.TAGS.CODE_TESTING],
