@@ -11,9 +11,9 @@
 <div class="lrContainer">
     <div class="input-group">
         <label for="numberInput">Learning Rate: </label>
-        <input type="number" id="numberInput" name="learning_rate" step="any" value="1e-3" min="0">
+        <input type="number" id="numberInput" name="learning_rate" step="any" value="1e-2" min="0">
     </div>
-    <input type="range" id="multiStageSlider" class="multiStageSlider" name="learning_rate" min="1" max="701" step="1" value="1e-3">
+    <input type="range" id="multiStageSlider" class="multiStageSlider" name="learning_rate" min="1" max="701" step="1">
 </div>
 
 <script>
@@ -44,6 +44,25 @@
         return displayValue;
     }
 
+    function findSliderValueForInput(inputValue) {
+        if (inputValue <= 0.000001) {
+            return inputValue / 0.00000001;
+        } else if (inputValue <= 0.00001) {
+            return (inputValue - 0.000001) / 0.0000000894 + 100;
+        } else if (inputValue <= 0.0001) {
+            return (inputValue - 0.00001) / 0.000000894 + 200;
+        } else if (inputValue <= 0.001) {
+            return (inputValue - 0.0001) / 0.00000894 + 300;
+        } else if (inputValue <= 0.01) {
+            return (inputValue - 0.001) / 0.0000894 + 400;
+        } else if (inputValue <= 0.1) {
+            return (inputValue - 0.01) / 0.000894 + 500;
+        } else if (inputValue <= 1) {
+            return (inputValue - 0.1) / 0.00894 + 600;
+        } else {
+            return (inputValue - 1) / 0.0894 + 701;
+        }
+    }
 
     slider.addEventListener('input', function() {
         const value = parseInt(slider.value);
@@ -55,10 +74,14 @@
 
     numberInput.addEventListener('input', function() {
         const inputValue = parseFloat(numberInput.value);
+        const sliderValue = findSliderValueForInput(inputValue);
+        slider.value = sliderValue;
         output.textContent = inputValue.toExponential(2);
     });
 
-    // Initialize the display value
+    // Initialize the slider value to correspond with the initial input value
+    const initialInputValue = parseFloat(numberInput.value);
+    slider.value = findSliderValueForInput(initialInputValue);
     slider.dispatchEvent(new Event('input'));
 </script>
 
