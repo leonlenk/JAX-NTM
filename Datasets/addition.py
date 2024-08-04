@@ -75,12 +75,24 @@ class BinaryAdditionLoader(DataloaderInterface):
 
     # TODO is this the right criterion to use?
     def criterion(self, predictions, targets):
-        return jnp.mean(optax.losses.l2_loss(predictions, targets))
+        truncated_predictions = predictions.at[1, :].get()
+        truncated_targets = targets.at[1, :].get()
+        return jnp.mean(
+            optax.losses.l2_loss(
+                jax.nn.sigmoid(truncated_predictions), truncated_targets
+            )
+        )
         # return jnp.mean(jnp.abs(predictions - targets))  # mean absolute error (l1) loss
 
     def accuracy_metric(self, predictions, targets):
+        truncated_predictions = predictions.at[1, :].get()
+        truncated_targets = targets.at[1, :].get()
         return jnp.mean(
-            jnp.isclose(predictions, targets, atol=self.config.accuracy_tolerance)
+            jnp.isclose(
+                jax.nn.sigmoid(truncated_predictions),
+                truncated_targets,
+                atol=self.config.accuracy_tolerance,
+            )
         )
 
     def update_split(self, new_split: str):

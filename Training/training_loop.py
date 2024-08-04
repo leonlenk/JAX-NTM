@@ -117,5 +117,5 @@ def train(
         # TODO add metrics to checkpointer to save best model
         if checkpoint_wrapper is not None:
             checkpoint_wrapper.save_checkpoint(
-                training_config.model_state, epoch, training_metadata.get_metadata()
+                training_config.model_state, training_metadata.get_metadata()
             )

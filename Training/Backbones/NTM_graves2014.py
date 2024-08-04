@@ -46,8 +46,14 @@ class LSTMTrainingConfig(TrainingConfigInterface):
 
     def run_model(self, model_params, data, output_shape, memory_width):
         # initial values
-        read_previous = jnp.zeros((memory_width,)).at[0].set(1)
-        write_previous = jnp.zeros((memory_width,)).at[0].set(1)
+        read_previous = [
+            jnp.zeros((memory_width,)).at[0].set(1)
+            for _ in range(len(self.model.read_heads))
+        ]
+        write_previous = [
+            jnp.zeros((memory_width,)).at[0].set(1)
+            for _ in range(len(self.model.write_heads))
+        ]
         memory_weights = jnp.zeros((memory_width, self.model_config.memory_M))
         carry = None
         prng_key, self.model_config.prng_key = jax.random.split(
@@ -70,7 +76,8 @@ class LSTMTrainingConfig(TrainingConfigInterface):
                 )
             )
 
-        carry = None
+        # return memory_weights.at[:output_shape[0],:output_shape[1]].get()
+
         output = jnp.empty(output_shape)
         for sequence in range(output_shape[0]):
             self.memory_model.update_step(input_index=None, output_index=sequence)
@@ -110,10 +117,10 @@ class LSTMTrainingConfig(TrainingConfigInterface):
         memory_model = self.model_config.memory_class()
 
         # init read and write heads
-        read_head = [
+        read_heads = [
             self.model_config.read_head_class(temp_n, self.model_config.memory_M)
         ]
-        write_head = [
+        write_heads = [
             self.model_config.write_head_class(temp_n, self.model_config.memory_M)
         ]
 
@@ -121,8 +128,8 @@ class LSTMTrainingConfig(TrainingConfigInterface):
         model = self.model_config.backbone_class(
             self.model_config.num_layers,
             self.model_config.input_features,
-            read_head,
-            write_head,
+            read_heads,
+            write_heads,
             self.model_config.memory_M,
         )
 
@@ -163,8 +170,11 @@ if __name__ == "__main__":
 
     training_name = "NTM_graves2014_copy"
 
-    MEMORY_DEPTH = 12
-    MEMORY_WIDTH = 8
+    use_existing_checkpoint = True
+    continue_training = True
+
+    MEMORY_DEPTH = 10
+    MEMORY_WIDTH = 16
     INPUT_SIZE = 8
 
     model_config = LSTMConfig(
@@ -176,7 +186,7 @@ if __name__ == "__main__":
         write_head_class=NTMWriteController,
         memory_M=MEMORY_DEPTH,
         memory_N=MEMORY_WIDTH,
-        num_layers=1,
+        num_layers=2,
         input_features=INPUT_SIZE,
         random_seed=globals.JAX.RANDOM_SEED,
     )
@@ -184,8 +194,8 @@ if __name__ == "__main__":
 
     curriculum_config = {
         CURRICULUM.CONFIGS.ACCURACY_THRESHOLD: 0.9,
-        CURRICULUM.CONFIGS.MIN: 2,
-        CURRICULUM.CONFIGS.MAX: 7,
+        CURRICULUM.CONFIGS.MIN: 1,
+        CURRICULUM.CONFIGS.MAX: 15,
         CURRICULUM.CONFIGS.ZAREMBA2014.P1: 0.10,
         CURRICULUM.CONFIGS.ZAREMBA2014.P2: 0.25,
         CURRICULUM.CONFIGS.ZAREMBA2014.P3: 0.65,
@@ -228,7 +238,6 @@ if __name__ == "__main__":
         TrainingConfig={str(0): training_config},
     )
 
-    use_existing_checkpoint = False
     checkpoint_wrapper = CheckpointWrapper(
         training_name, delete_existing=not use_existing_checkpoint
     )
@@ -238,18 +247,20 @@ if __name__ == "__main__":
             abstract_pytree=training_config.model_state
         ).state
 
-    else:
+    if continue_training:
         train(
             project_name=globals.WANDB.PROJECTS.CODE_TESTING,
             training_config=training_config,
             training_metadata=training_metadata,
-            num_epochs=10,
+            num_epochs=5,
             train_dataset=train_dataset,
             val_dataset=val_dataset,
             wandb_tags=[globals.WANDB.TAGS.CODE_TESTING],
             checkpoint_wrapper=checkpoint_wrapper,
             # use_wandb=True,
         )
+
+    import random
 
     from tqdm import tqdm
 
@@ -264,7 +275,7 @@ if __name__ == "__main__":
     )
 
     num_batches_per_level = 1
-    curriculum_levels = [x for x in range(2, 20)]
+    curriculum_levels = [x for x in range(1, 20)]
 
     with tqdm(curriculum_levels) as pbar:
         pbar.set_description("Visualization")
@@ -277,6 +288,7 @@ if __name__ == "__main__":
                 num_batches=num_batches_per_level,
                 memory_depth=INPUT_SIZE,
                 config=dataset_config,
+                seed=random.randint(0, 100),
             )
 
             for data_batch, target_batch in test_dataset:

@@ -97,19 +97,22 @@ class CheckpointWrapper:
             item_names=(CHECKPOINTS.STATE, CHECKPOINTS.METADATA),
         )
 
+        self.current_step = 0
+
     def save_checkpoint(
         self,
         state: Any,
-        step: int = 0,
         metadata: dict = {},
+        step_increment: int = 1,
     ):
         args = {
             CHECKPOINTS.STATE: ocp.args.StandardSave(state),  # type: ignore
             CHECKPOINTS.METADATA: ocp.args.JsonSave(metadata),  # type: ignore
         }
 
+        self.current_step += step_increment
         self.mngr.save(
-            step,
+            self.current_step,
             args=ocp.args.Composite(**args),
         )
 
@@ -132,6 +135,8 @@ class CheckpointWrapper:
             step = self.mngr.latest_step()
 
         assert step is not None, "No checkpoint found"
+
+        self.current_step = step
 
         if abstract_pytree is not None:
             args = {
