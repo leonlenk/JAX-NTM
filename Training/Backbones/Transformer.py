@@ -24,11 +24,11 @@ class TransformerConfig(ModelConfigInterface):
     memory_M: int
     memory_N: int
     num_layers: int
-    dim_model: int
     num_heads: int
     dim_ff: int
     max_sequence_len: int
     random_seed: int
+    hidden_dim: int
 
     def __post_init__(self):
         self.prng_key = jax.random.key(self.random_seed)
@@ -134,10 +134,10 @@ class TransformerTrainingConfig(TrainingConfigInterface):
         # init backbone
         model = self.model_config.backbone_class(
             layers=self.model_config.num_layers,
-            num_outputs=self.model_config.dim_model,
+            num_outputs=self.model_config.hidden_dim,
             read_heads=read_heads,
             write_heads=write_heads,
-            dim_model=self.model_config.dim_model,
+            dim_model=self.model_config.hidden_dim,
             num_heads=self.model_config.num_heads,
             dim_ff=self.model_config.dim_ff,
         )
@@ -145,7 +145,7 @@ class TransformerTrainingConfig(TrainingConfigInterface):
         memory_weights = jnp.zeros(MEMORY_SHAPE)
         read_previous = jnp.ones((model_config.num_layers, temp_n))
         write_previous = jnp.ones((model_config.num_layers, temp_n))
-        init_input = jnp.ones((2, self.model_config.dim_model))
+        init_input = jnp.ones((2, self.model_config.hidden_dim))
 
         params = model.init(
             key1,
@@ -188,7 +188,7 @@ if __name__ == "__main__":
         memory_M=MEMORY_DEPTH,
         memory_N=10,
         num_layers=2,
-        dim_model=INPUT_SIZE,
+        hidden_dim=INPUT_SIZE,
         num_heads=1,
         dim_ff=250,
         max_sequence_len=20,

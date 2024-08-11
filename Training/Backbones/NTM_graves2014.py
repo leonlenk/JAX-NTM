@@ -26,6 +26,7 @@ class LSTMConfig(ModelConfigInterface):
     num_layers: int
     input_features: int
     random_seed: int
+    hidden_dim: int
 
     def __post_init__(self):
         self.prng_key = jax.random.key(self.random_seed)
@@ -130,7 +131,7 @@ class LSTMTrainingConfig(TrainingConfigInterface):
             self.model_config.input_features,
             read_heads,
             write_heads,
-            self.model_config.memory_M,
+            self.model_config.hidden_dim,
         )
 
         carry = None
@@ -189,6 +190,7 @@ if __name__ == "__main__":
         num_layers=2,
         input_features=INPUT_SIZE,
         random_seed=globals.JAX.RANDOM_SEED,
+        hidden_dim=2,
     )
     training_config = LSTMTrainingConfig(model_config)
 
