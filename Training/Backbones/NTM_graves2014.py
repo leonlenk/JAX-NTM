@@ -1,3 +1,4 @@
+import functools
 from dataclasses import dataclass
 from typing import Callable, Type
 
@@ -60,21 +61,31 @@ class LSTMTrainingConfig(TrainingConfigInterface):
         prng_key, self.model_config.prng_key = jax.random.split(
             self.model_config.prng_key, num=2
         )
+        read_data_previous = jnp.zeros(
+            (self.model_config.memory_M * len(self.model.write_heads),)
+        )
 
         # processing loop
         for sequence in range(data.shape[0]):
             self.memory_model.update_step(input_index=sequence, output_index=None)
-            (output, memory_weights, read_previous, write_previous, prng_key, carry) = (
-                self.model_state.apply_fn(
-                    {globals.JAX.PARAMS: model_params},
-                    data[sequence],
-                    memory_weights,
-                    read_previous,
-                    write_previous,
-                    self.memory_model,
-                    prng_key,
-                    carry,
-                )
+            (
+                output,
+                memory_weights,
+                read_previous,
+                write_previous,
+                read_data_previous,
+                prng_key,
+                carry,
+            ) = self.model_state.apply_fn(
+                {globals.JAX.PARAMS: model_params},
+                data[sequence],
+                memory_weights,
+                read_previous,
+                write_previous,
+                read_data_previous,
+                self.memory_model,
+                prng_key,
+                carry,
             )
 
         # return memory_weights.at[:output_shape[0],:output_shape[1]].get()
@@ -87,6 +98,7 @@ class LSTMTrainingConfig(TrainingConfigInterface):
                 memory_weights,
                 read_previous,
                 write_previous,
+                read_data_previous,
                 prng_key,
                 carry,
             ) = self.model_state.apply_fn(
@@ -95,6 +107,7 @@ class LSTMTrainingConfig(TrainingConfigInterface):
                 memory_weights,
                 read_previous,
                 write_previous,
+                read_data_previous,
                 self.memory_model,
                 prng_key,
                 carry,
@@ -138,21 +151,25 @@ class LSTMTrainingConfig(TrainingConfigInterface):
         prng_key, key2, self.model_config.prng_key = jax.random.split(
             self.model_config.prng_key, num=3
         )
-        init_input = jnp.ones((self.model_config.input_features,))
+        init_input = jnp.ones((self.model_config.input_features * len(read_heads),))
         memory_weights = jnp.ones((temp_n, self.model_config.memory_M))
+        read_data_previous = jnp.zeros((self.model_config.memory_M,))
         params = model.init(
             key2,
             init_input,
             memory_weights,
             jnp.ones(temp_n),
             jnp.ones(temp_n),
+            read_data_previous,
             memory_model,
             prng_key,
             carry,
         )
         model_state = train_state.TrainState.create(
             apply_fn=model.apply,
-            tx=optax.adam(self.model_config.learning_rate),
+            tx=self.model_config.optimizer(
+                learning_rate=self.model_config.learning_rate
+            ),
             params=params[globals.JAX.PARAMS],
         )
 
@@ -169,35 +186,37 @@ if __name__ == "__main__":
     from Training.Curriculum_zaremba2014 import CurriculumSchedulerZaremba2014
     from Training.training_loop import train
 
+    jax.config.update("jax_platform_name", "gpu")
+
     training_name = "NTM_graves2014_copy"
 
-    use_existing_checkpoint = True
+    use_existing_checkpoint = False
     continue_training = True
 
-    MEMORY_DEPTH = 10
-    MEMORY_WIDTH = 16
+    MEMORY_DEPTH = 20
+    MEMORY_WIDTH = 128
     INPUT_SIZE = 8
 
     model_config = LSTMConfig(
-        learning_rate=1e-2,
-        optimizer=optax.adamw,
+        learning_rate=1e-4,
+        optimizer=functools.partial(optax.rmsprop, momentum=0.9),
         memory_class=NTMMemory,
         backbone_class=LSTMModel,
         read_head_class=NTMReadController,
         write_head_class=NTMWriteController,
         memory_M=MEMORY_DEPTH,
         memory_N=MEMORY_WIDTH,
-        num_layers=2,
+        num_layers=1,
         input_features=INPUT_SIZE,
         random_seed=globals.JAX.RANDOM_SEED,
-        hidden_dim=2,
+        hidden_dim=100,
     )
     training_config = LSTMTrainingConfig(model_config)
 
     curriculum_config = {
         CURRICULUM.CONFIGS.ACCURACY_THRESHOLD: 0.9,
         CURRICULUM.CONFIGS.MIN: 1,
-        CURRICULUM.CONFIGS.MAX: 15,
+        CURRICULUM.CONFIGS.MAX: 20,
         CURRICULUM.CONFIGS.ZAREMBA2014.P1: 0.10,
         CURRICULUM.CONFIGS.ZAREMBA2014.P2: 0.25,
         CURRICULUM.CONFIGS.ZAREMBA2014.P3: 0.65,
@@ -207,15 +226,15 @@ if __name__ == "__main__":
         curriculum_scheduler=curric, accuracy_tolerance=0.1
     )
     train_dataset = CopyLoader(
-        batch_size=256,
-        num_batches=50,
+        batch_size=1,
+        num_batches=50000,
         memory_depth=INPUT_SIZE,
         config=dataset_config,
     )
 
     val_dataset = CopyLoader(
-        batch_size=256,
-        num_batches=5,
+        batch_size=1,
+        num_batches=10000,
         memory_depth=INPUT_SIZE,
         config=dataset_config,
     )
@@ -254,7 +273,7 @@ if __name__ == "__main__":
             project_name=globals.WANDB.PROJECTS.CODE_TESTING,
             training_config=training_config,
             training_metadata=training_metadata,
-            num_epochs=5,
+            num_epochs=1,
             train_dataset=train_dataset,
             val_dataset=val_dataset,
             wandb_tags=[globals.WANDB.TAGS.CODE_TESTING],

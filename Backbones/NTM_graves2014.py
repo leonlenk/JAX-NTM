@@ -32,6 +32,7 @@ class LSTMModel(BackboneInterface):
         memory_weights,
         read_previous,
         write_previous,
+        read_data_previous: jax.Array,
         memory_model,
         prng_key: jax.Array,
         carry: List[Tuple[jax.Array, jax.Array]] | None,
@@ -43,6 +44,8 @@ class LSTMModel(BackboneInterface):
             for layer in lstm_layers:
                 prng_key, split_key = jax.random.split(prng_key)
                 carry.append(layer.initialize_carry(split_key, input.shape))
+
+        jnp.concat((input, read_data_previous), axis=-1)
 
         for i in range(self.layers):
             carry[i], input = lstm_layers[i](carry[i], input)
@@ -79,6 +82,7 @@ class LSTMModel(BackboneInterface):
             memory_weights,
             read_locations,
             write_locations,
+            read_data_previous,
             prng_key,
             carry,
         )
