@@ -1,4 +1,5 @@
-# neural-turing-machines
+# JAX-NTM
+A full remimplimentation of the paper [Neural Turing Machines](https://arxiv.org/abs/1410.5401) by Alex Graves, Greg Wayne, and Ivo Danihelka in google's deep learning framework [JAX](https://jax.readthedocs.io/en/latest/quickstart.html).
 
 ## Terminology
 - Algorithmic Tasks: has closed form solution
