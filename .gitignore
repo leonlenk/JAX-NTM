@@ -3,6 +3,8 @@ Visualization_Outputs/
 wandb/
 Datasets/cache/
 Checkpoints/
+.DS_Store
+
 
 # wp
 *.swp
